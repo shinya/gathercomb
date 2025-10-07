@@ -1,0 +1,35 @@
+# Dockerfile for Gathercomb Backend (Development)
+FROM node:20-alpine
+
+# Install dependencies for native modules (bcrypt, pg, etc.)
+RUN apk add --no-cache \
+    python3 \
+    make \
+    g++ \
+    postgresql-dev \
+    libc-dev
+
+WORKDIR /app
+
+# Copy package files first for better caching
+COPY package*.json ./
+COPY apps/server/package*.json ./apps/server/
+COPY packages/shared/package*.json ./packages/shared/
+
+# Install dependencies
+RUN npm install
+
+# Copy source code
+COPY . .
+
+# Build shared package
+RUN cd packages/shared && npm run build
+
+# Build server
+RUN cd apps/server && npm run build
+
+# Expose port
+EXPOSE 8080
+
+# Start server in development mode
+CMD ["npm", "run", "dev", "--workspace=apps/server"]

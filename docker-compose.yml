@@ -1,0 +1,73 @@
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    ports:
+      - "8080:8080"
+    environment:
+      - NODE_ENV=development
+      - PORT=8080
+      - DATABASE_URL=postgresql://gathercomb:gathercomb@db:5432/gathercomb
+      - SESSION_SECRET=your-session-secret-change-in-production-must-be-at-least-32-chars
+      - JWT_SECRET=your-jwt-secret-change-in-production-must-be-at-least-32-chars
+      - ALLOWED_ORIGINS=http://localhost:3000,http://localhost:8080,http://localhost
+      - SNAPSHOT_INTERVAL=500
+      - SNAPSHOT_PERIOD_SEC=300
+      - SMTP_HOST=mailcatcher
+      - SMTP_PORT=1025
+      - SMTP_USER=
+      - SMTP_PASS=
+      - SMTP_FROM=noreply@gathercomb.local
+    depends_on:
+      db:
+        condition: service_healthy
+      mailcatcher:
+        condition: service_started
+    volumes:
+      - ./apps/server:/app/apps/server
+      - ./packages/shared:/app/packages/shared
+      - ./data:/app/data
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    ports:
+      - "3000:3000"
+    environment:
+      - VITE_API_URL=http://localhost:8080/api
+      - VITE_WS_URL=localhost:8080
+    volumes:
+      - ./apps/web:/app/apps/web
+      - ./packages/shared:/app/packages/shared
+    restart: unless-stopped
+
+  db:
+    image: postgres:16-alpine
+    environment:
+      - POSTGRES_DB=gathercomb
+      - POSTGRES_USER=gathercomb
+      - POSTGRES_PASSWORD=gathercomb
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U gathercomb -d gathercomb"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  mailcatcher:
+    image: sj26/mailcatcher:latest
+    ports:
+      - "1080:1080"  # Web interface
+      - "1025:1025"  # SMTP server
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
