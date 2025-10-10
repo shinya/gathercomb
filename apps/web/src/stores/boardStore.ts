@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { BoardProvider } from '../yjs/BoardProvider.js';
-import { StickyNote } from '@gathercomb/shared';
+import { StickyNote, Rectangle, Circle, TextShape, ToolType, STICKY_COLORS } from '@gathercomb/shared';
 
 interface CanvasState {
   // Canvas view state
@@ -88,6 +88,7 @@ interface BoardState {
   boardId: string | null;
   boardTitle: string;
   stickyNotes: Map<string, StickyNote>;
+  shapes: Map<string, Rectangle | Circle | TextShape>;
 
   // Provider
   boardProvider: BoardProvider | null;
@@ -99,25 +100,58 @@ interface BoardState {
   // Error state
   error: string | null;
 
+  // UI state
+  selectedTool: ToolType;
+  selectedColor: string;
+  contextMenu: {
+    visible: boolean;
+    x: number;
+    y: number;
+    stickyId: string | null;
+    shapeId: string | null;
+  };
+
   // Actions
   setBoardId: (boardId: string) => void;
   setBoardTitle: (title: string) => void;
   setStickyNotes: (notes: Map<string, StickyNote>) => void;
+  setShapes: (shapes: Map<string, Rectangle | Circle | TextShape>) => void;
   setBoardProvider: (provider: BoardProvider | null) => void;
   setIsLoading: (loading: boolean) => void;
   setIsConnected: (connected: boolean) => void;
   setError: (error: string | null) => void;
+  setSelectedTool: (tool: ToolType) => void;
+  setSelectedColor: (color: string) => void;
+  setContextMenu: (menu: { visible: boolean; x: number; y: number; stickyId: string | null; shapeId: string | null }) => void;
 
   // Sticky note actions
   addStickyNote: (note: StickyNote) => void;
   updateStickyNote: (id: string, updates: Partial<StickyNote>) => void;
   removeStickyNote: (id: string) => void;
 
+  // Shape actions
+  addShape: (shape: Rectangle | Circle | TextShape) => void;
+  updateShape: (id: string, updates: Partial<Rectangle | Circle | TextShape>) => void;
+  removeShape: (id: string) => void;
+
   // Board actions
   initializeBoard: (title: string) => void;
   createStickyNote: (id: string, data: Partial<StickyNote>) => void;
   updateStickyNoteData: (id: string, updates: Partial<StickyNote>) => void;
   deleteStickyNoteData: (id: string) => void;
+
+  // Shape board actions
+  createRectangle: (id: string, data: Partial<Rectangle>) => void;
+  createCircle: (id: string, data: Partial<Circle>) => void;
+  createTextShape: (id: string, data: Partial<TextShape>) => void;
+  updateShapeData: (id: string, updates: Partial<Rectangle | Circle | TextShape>) => void;
+  deleteShapeData: (id: string) => void;
+
+  // Context menu actions
+  showContextMenu: (x: number, y: number, stickyId: string | null, shapeId: string | null) => void;
+  hideContextMenu: () => void;
+  changeStickyColor: (stickyId: string, color: string) => void;
+  changeShapeColor: (shapeId: string, color: string) => void;
 }
 
 export const useBoardStore = create<BoardState>((set, get) => ({
@@ -125,19 +159,33 @@ export const useBoardStore = create<BoardState>((set, get) => ({
   boardId: null,
   boardTitle: '',
   stickyNotes: new Map(),
+  shapes: new Map(),
   boardProvider: null,
   isLoading: false,
   isConnected: false,
   error: null,
+  selectedTool: 'select',
+  selectedColor: STICKY_COLORS[0], // Default to first color (yellow)
+  contextMenu: {
+    visible: false,
+    x: 0,
+    y: 0,
+    stickyId: null,
+    shapeId: null,
+  },
 
   // Actions
   setBoardId: (boardId) => set({ boardId }),
   setBoardTitle: (boardTitle) => set({ boardTitle }),
   setStickyNotes: (stickyNotes) => set({ stickyNotes }),
+  setShapes: (shapes) => set({ shapes }),
   setBoardProvider: (boardProvider) => set({ boardProvider }),
   setIsLoading: (isLoading) => set({ isLoading }),
   setIsConnected: (isConnected) => set({ isConnected }),
   setError: (error) => set({ error }),
+  setSelectedTool: (selectedTool) => set({ selectedTool }),
+  setSelectedColor: (selectedColor) => set({ selectedColor }),
+  setContextMenu: (contextMenu) => set({ contextMenu }),
 
   // Sticky note actions
   addStickyNote: (note) => {
@@ -162,6 +210,31 @@ export const useBoardStore = create<BoardState>((set, get) => ({
     const newNotes = new Map(stickyNotes);
     newNotes.delete(id);
     set({ stickyNotes: newNotes });
+  },
+
+  // Shape actions
+  addShape: (shape) => {
+    const { shapes } = get();
+    const newShapes = new Map(shapes);
+    newShapes.set(shape.id, shape as Rectangle | Circle | TextShape);
+    set({ shapes: newShapes });
+  },
+
+  updateShape: (id, updates) => {
+    const { shapes } = get();
+    const newShapes = new Map(shapes);
+    const existingShape = newShapes.get(id);
+    if (existingShape) {
+      newShapes.set(id, { ...existingShape, ...updates } as Rectangle | Circle | TextShape);
+      set({ shapes: newShapes });
+    }
+  },
+
+  removeShape: (id) => {
+    const { shapes } = get();
+    const newShapes = new Map(shapes);
+    newShapes.delete(id);
+    set({ shapes: newShapes });
   },
 
   // Board actions
@@ -191,6 +264,81 @@ export const useBoardStore = create<BoardState>((set, get) => ({
     const { boardProvider } = get();
     if (boardProvider) {
       boardProvider.deleteStickyNote(id);
+    }
+  },
+
+  // Shape board actions
+  createRectangle: (id, data) => {
+    const { boardProvider } = get();
+    if (boardProvider) {
+      boardProvider.createRectangle(id, data as Partial<Rectangle>);
+    }
+  },
+
+  createCircle: (id, data) => {
+    const { boardProvider } = get();
+    if (boardProvider) {
+      boardProvider.createCircle(id, data as Partial<Circle>);
+    }
+  },
+
+  createTextShape: (id, data) => {
+    const { boardProvider } = get();
+    if (boardProvider) {
+      boardProvider.createTextShape(id, data as Partial<TextShape>);
+    }
+  },
+
+  updateShapeData: (id, updates) => {
+    const { boardProvider } = get();
+    if (boardProvider) {
+      boardProvider.updateShape(id, updates);
+    }
+  },
+
+  deleteShapeData: (id) => {
+    const { boardProvider } = get();
+    if (boardProvider) {
+      boardProvider.deleteShape(id);
+    }
+  },
+
+  // Context menu actions
+  showContextMenu: (x, y, stickyId, shapeId) => {
+    set({
+      contextMenu: {
+        visible: true,
+        x,
+        y,
+        stickyId,
+        shapeId,
+      },
+    });
+  },
+
+  hideContextMenu: () => {
+    set({
+      contextMenu: {
+        visible: false,
+        x: 0,
+        y: 0,
+        stickyId: null,
+        shapeId: null,
+      },
+    });
+  },
+
+  changeStickyColor: (stickyId, color) => {
+    const { boardProvider } = get();
+    if (boardProvider) {
+      boardProvider.updateStickyNote(stickyId, { color });
+    }
+  },
+
+  changeShapeColor: (shapeId, color) => {
+    const { boardProvider } = get();
+    if (boardProvider) {
+      boardProvider.updateShape(shapeId, { fill: color });
     }
   },
 }));

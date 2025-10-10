@@ -112,6 +112,36 @@ export class BoardProvider {
     return this.boardDoc.getStickyNotes();
   }
 
+  // Create rectangle
+  createRectangle(id: string, data: any): void {
+    this.boardDoc.createRectangle(id, data, this.userId);
+  }
+
+  // Create circle
+  createCircle(id: string, data: any): void {
+    this.boardDoc.createCircle(id, data, this.userId);
+  }
+
+  // Create text shape
+  createTextShape(id: string, data: any): void {
+    this.boardDoc.createTextShape(id, data, this.userId);
+  }
+
+  // Update shape
+  updateShape(id: string, updates: any): void {
+    this.boardDoc.updateShape(id, updates);
+  }
+
+  // Delete shape
+  deleteShape(id: string): void {
+    this.boardDoc.deleteShape(id);
+  }
+
+  // Get all shapes
+  getShapes(): Map<string, any> {
+    return this.boardDoc.getShapes();
+  }
+
   // Get board metadata
   getBoardMeta(): any {
     return this.boardDoc.getBoardMeta();

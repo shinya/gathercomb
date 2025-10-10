@@ -170,7 +170,52 @@ export const STICKY_COLORS = [
   '#54a0ff', // Light Blue
 ] as const;
 
+// Shape types
+export type ShapeType = 'sticky' | 'rectangle' | 'circle' | 'text';
+
+export interface BaseShape {
+  id: string;
+  type: ShapeType;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  rotation: number;
+  zIndex: number;
+  createdBy: string;
+}
+
+export interface Rectangle extends BaseShape {
+  type: 'rectangle';
+  fill: string;
+  stroke: string;
+  strokeWidth: number;
+}
+
+export interface Circle extends BaseShape {
+  type: 'circle';
+  fill: string;
+  stroke: string;
+  strokeWidth: number;
+}
+
+export interface TextShape extends BaseShape {
+  type: 'text';
+  text: string;
+  fontSize: number;
+  fontFamily: string;
+  fill: string;
+}
+
+// Tool types
+export type ToolType = 'select' | 'sticky' | 'rectangle' | 'circle' | 'text';
+
 export const DEFAULT_STICKY_SIZE = {
   width: 200,
   height: 150,
+} as const;
+
+export const DEFAULT_SHAPE_SIZE = {
+  width: 100,
+  height: 100,
 } as const;

@@ -68,7 +68,7 @@ export const boardService = {
       [userId]
     );
 
-    return boards.map(board => ({
+    return boards.map((board: any) => ({
       id: board.id,
       title: board.title,
       ownerId: board.owner_id,

@@ -1,9 +1,10 @@
 import * as Y from 'yjs';
-import { StickyNote } from '@gathercomb/shared';
+import { StickyNote, Rectangle, Circle, TextShape } from '@gathercomb/shared';
 
 // Yjs document structure for a board
 export interface BoardDoc {
   stickies: Y.Map<Y.Map<any>>;
+  shapes: Y.Map<Y.Map<any>>;
   layers: Y.Array<string>;
   meta: Y.Map<any>;
 }
@@ -58,6 +59,9 @@ export class BoardDocument {
     if (this.boardMap.get('stickies') === undefined) {
       this.boardMap.set('stickies', new Y.Map());
     }
+    if (this.boardMap.get('shapes') === undefined) {
+      this.boardMap.set('shapes', new Y.Map());
+    }
     if (this.boardMap.get('layers') === undefined) {
       this.boardMap.set('layers', new Y.Array());
     }
@@ -87,6 +91,7 @@ export class BoardDocument {
   getBoardDoc(): BoardDoc {
     return {
       stickies: this.boardMap.get('stickies') as Y.Map<Y.Map<any>>,
+      shapes: this.boardMap.get('shapes') as Y.Map<Y.Map<any>>,
       layers: this.boardMap.get('layers') as Y.Array<string>,
       meta: this.boardMap.get('meta') as Y.Map<any>,
     };
@@ -190,6 +195,190 @@ export class BoardDocument {
         zIndex: stickyMap.get('zIndex'),
         createdBy: stickyMap.get('createdBy'),
       });
+    });
+
+    return result;
+  }
+
+  // Create a new rectangle
+  createRectangle(id: string, data: Partial<Rectangle>, userId: string): void {
+    const shapes = this.boardMap.get('shapes') as Y.Map<Y.Map<any>>;
+    const layers = this.boardMap.get('layers') as Y.Array<string>;
+
+    if (!shapes || !layers) {
+      console.error('Board not initialized. Call initializeBoard() first.');
+      return;
+    }
+
+    const shapeMap = new Y.Map();
+    shapeMap.set('type', 'rectangle');
+    shapeMap.set('fill', data.fill || '#4ecdc4');
+    shapeMap.set('stroke', data.stroke || '#333');
+    shapeMap.set('strokeWidth', data.strokeWidth || 2);
+    shapeMap.set('x', data.x || 0);
+    shapeMap.set('y', data.y || 0);
+    shapeMap.set('width', data.width || 100);
+    shapeMap.set('height', data.height || 100);
+    shapeMap.set('rotation', data.rotation || 0);
+    shapeMap.set('zIndex', data.zIndex || 0);
+    shapeMap.set('createdBy', userId);
+    shapeMap.set('createdAt', Date.now());
+    shapeMap.set('updatedAt', Date.now());
+
+    shapes.set(id, shapeMap);
+    layers.push([id]);
+  }
+
+  // Create a new circle
+  createCircle(id: string, data: Partial<Circle>, userId: string): void {
+    const shapes = this.boardMap.get('shapes') as Y.Map<Y.Map<any>>;
+    const layers = this.boardMap.get('layers') as Y.Array<string>;
+
+    if (!shapes || !layers) {
+      console.error('Board not initialized. Call initializeBoard() first.');
+      return;
+    }
+
+    const shapeMap = new Y.Map();
+    shapeMap.set('type', 'circle');
+    shapeMap.set('fill', data.fill || '#ff6b6b');
+    shapeMap.set('stroke', data.stroke || '#333');
+    shapeMap.set('strokeWidth', data.strokeWidth || 2);
+    shapeMap.set('x', data.x || 0);
+    shapeMap.set('y', data.y || 0);
+    shapeMap.set('width', data.width || 100);
+    shapeMap.set('height', data.height || 100);
+    shapeMap.set('rotation', data.rotation || 0);
+    shapeMap.set('zIndex', data.zIndex || 0);
+    shapeMap.set('createdBy', userId);
+    shapeMap.set('createdAt', Date.now());
+    shapeMap.set('updatedAt', Date.now());
+
+    shapes.set(id, shapeMap);
+    layers.push([id]);
+  }
+
+  // Create a new text shape
+  createTextShape(id: string, data: Partial<TextShape>, userId: string): void {
+    const shapes = this.boardMap.get('shapes') as Y.Map<Y.Map<any>>;
+    const layers = this.boardMap.get('layers') as Y.Array<string>;
+
+    if (!shapes || !layers) {
+      console.error('Board not initialized. Call initializeBoard() first.');
+      return;
+    }
+
+    const shapeMap = new Y.Map();
+    shapeMap.set('type', 'text');
+    shapeMap.set('text', data.text || 'Text');
+    shapeMap.set('fontSize', data.fontSize || 16);
+    shapeMap.set('fontFamily', data.fontFamily || 'Arial, sans-serif');
+    shapeMap.set('fill', data.fill || '#333');
+    shapeMap.set('x', data.x || 0);
+    shapeMap.set('y', data.y || 0);
+    shapeMap.set('width', data.width || 100);
+    shapeMap.set('height', data.height || 30);
+    shapeMap.set('rotation', data.rotation || 0);
+    shapeMap.set('zIndex', data.zIndex || 0);
+    shapeMap.set('createdBy', userId);
+    shapeMap.set('createdAt', Date.now());
+    shapeMap.set('updatedAt', Date.now());
+
+    shapes.set(id, shapeMap);
+    layers.push([id]);
+  }
+
+  // Update a shape
+  updateShape(id: string, updates: Partial<Rectangle | Circle | TextShape>): void {
+    const shapes = this.boardMap.get('shapes') as Y.Map<Y.Map<any>>;
+
+    if (!shapes) {
+      console.error('Board not initialized. Call initializeBoard() first.');
+      return;
+    }
+
+    const shapeMap = shapes.get(id);
+    if (!shapeMap) return;
+
+    Object.entries(updates).forEach(([key, value]) => {
+      if (key === 'text' && typeof value === 'string') {
+        shapeMap.set(key, value);
+      } else if (value !== undefined) {
+        shapeMap.set(key, value);
+      }
+    });
+
+    shapeMap.set('updatedAt', Date.now());
+  }
+
+  // Delete a shape
+  deleteShape(id: string): void {
+    const shapes = this.boardMap.get('shapes') as Y.Map<Y.Map<any>>;
+    const layers = this.boardMap.get('layers') as Y.Array<string>;
+
+    if (!shapes || !layers) {
+      console.error('Board not initialized. Call initializeBoard() first.');
+      return;
+    }
+
+    shapes.delete(id);
+
+    // Remove from layers array
+    const index = layers.toArray().indexOf(id);
+    if (index !== -1) {
+      layers.delete(index, 1);
+    }
+  }
+
+  // Get all shapes
+  getShapes(): Map<string, Rectangle | Circle | TextShape> {
+    const shapes = this.boardMap.get('shapes') as Y.Map<Y.Map<any>>;
+    const result = new Map<string, Rectangle | Circle | TextShape>();
+
+    if (!shapes) {
+      return result;
+    }
+
+    shapes.forEach((shapeMap, id) => {
+      const type = shapeMap.get('type');
+      const baseShape = {
+        id,
+        type,
+        x: shapeMap.get('x'),
+        y: shapeMap.get('y'),
+        width: shapeMap.get('width'),
+        height: shapeMap.get('height'),
+        rotation: shapeMap.get('rotation'),
+        zIndex: shapeMap.get('zIndex'),
+        createdBy: shapeMap.get('createdBy'),
+      };
+
+      if (type === 'rectangle') {
+        result.set(id, {
+          ...baseShape,
+          type: 'rectangle',
+          fill: shapeMap.get('fill'),
+          stroke: shapeMap.get('stroke'),
+          strokeWidth: shapeMap.get('strokeWidth'),
+        } as Rectangle);
+      } else if (type === 'circle') {
+        result.set(id, {
+          ...baseShape,
+          type: 'circle',
+          fill: shapeMap.get('fill'),
+          stroke: shapeMap.get('stroke'),
+          strokeWidth: shapeMap.get('strokeWidth'),
+        } as Circle);
+      } else if (type === 'text') {
+        result.set(id, {
+          ...baseShape,
+          type: 'text',
+          text: shapeMap.get('text'),
+          fontSize: shapeMap.get('fontSize'),
+          fontFamily: shapeMap.get('fontFamily'),
+          fill: shapeMap.get('fill'),
+        } as TextShape);
+      }
     });
 
     return result;

@@ -9,6 +9,7 @@ import { setupRoutes } from './routes/index.js';
 import { errorHandler } from './middleware/errorHandler.js';
 import { logger } from './utils/logger.js';
 import { config } from './utils/config.js';
+import { initializeDatabase, closeDatabase } from './utils/database.js';
 
 const app = express();
 const server = createServer(app);
@@ -67,7 +68,7 @@ app.use('*', (_req, res) => {
 // Setup WebSocket server
 const wss = new WebSocketServer({
   server,
-  verifyClient: (info) => {
+  verifyClient: (info: any) => {
     logger.info({ url: info.req.url, origin: info.origin }, 'WebSocket connection attempt');
     return true; // Accept all connections for now
   },
@@ -84,25 +85,38 @@ wss.on('error', (error) => {
 
 setupWebSocketServer(wss);
 
-// Start server
-const PORT = config.port;
-server.listen(PORT, () => {
-  logger.info(`Server running on port ${PORT}`);
-  logger.info(`Environment: ${config.nodeEnv}`);
-});
+// Initialize database and start server
+const startServer = async () => {
+  try {
+    await initializeDatabase();
+
+    const PORT = config.port;
+    server.listen(PORT, () => {
+      logger.info(`Server running on port ${PORT}`);
+      logger.info(`Environment: ${config.nodeEnv}`);
+    });
+  } catch (error) {
+    logger.error({ error }, 'Failed to start server');
+    process.exit(1);
+  }
+};
+
+startServer();
 
 // Graceful shutdown
-process.on('SIGTERM', () => {
+process.on('SIGTERM', async () => {
   logger.info('SIGTERM received, shutting down gracefully');
-  server.close(() => {
+  server.close(async () => {
+    await closeDatabase();
     logger.info('Server closed');
     process.exit(0);
   });
 });
 
-process.on('SIGINT', () => {
+process.on('SIGINT', async () => {
   logger.info('SIGINT received, shutting down gracefully');
-  server.close(() => {
+  server.close(async () => {
+    await closeDatabase();
     logger.info('Server closed');
     process.exit(0);
   });

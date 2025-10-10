@@ -13,12 +13,14 @@ export const BoardPage: React.FC = () => {
   const {
     boardTitle,
     stickyNotes,
+    shapes,
     boardProvider,
     isLoading,
     isConnected,
     error,
     setBoardTitle,
     setStickyNotes,
+    setShapes,
     setBoardProvider,
     setIsLoading,
     setIsConnected,
@@ -42,11 +44,30 @@ export const BoardPage: React.FC = () => {
 
         // Set initial data
         setStickyNotes(provider.getStickyNotes());
+        setShapes(provider.getShapes());
         setBoardTitle(provider.getBoardMeta().title);
 
         // Listen for changes
-        provider.getDocument().on('update', () => {
+        provider.getDocument().on('update', (_update: Uint8Array, _origin: any) => {
+          // Update UI for all updates to ensure real-time sync
+          console.log('Received update, updating UI');
           setStickyNotes(provider.getStickyNotes());
+          setShapes(provider.getShapes());
+        });
+
+        // Also listen for changes to the board document structure
+        const boardDoc = provider.getBoardDocument();
+        const stickiesMap = boardDoc.getBoardDoc().stickies;
+        const shapesMap = boardDoc.getBoardDoc().shapes;
+
+        stickiesMap.observe(() => {
+          console.log('Stickies map changed, updating UI');
+          setStickyNotes(provider.getStickyNotes());
+        });
+
+        shapesMap.observe(() => {
+          console.log('Shapes map changed, updating UI');
+          setShapes(provider.getShapes());
         });
 
         // Listen for connection status changes
@@ -137,7 +158,7 @@ export const BoardPage: React.FC = () => {
           <h2>{boardTitle || `Board ${id}`}</h2>
           <div style={{ fontSize: '12px', color: '#666' }}>
             {isConnected ? '🟢 Connected' : '🔴 Disconnected'} •
-            {stickyNotes.size} sticky notes
+            {stickyNotes.size} sticky notes • {shapes.size} shapes
           </div>
         </div>
         <div>
