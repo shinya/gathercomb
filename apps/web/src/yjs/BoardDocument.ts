@@ -56,7 +56,9 @@ export class BoardDocument {
 
   // Initialize board structure
   initializeBoard(title: string): void {
+    console.log('🔍 BoardDocument: initializeBoard called', { title });
     if (this.boardMap.get('stickies') === undefined) {
+      console.log('🔍 BoardDocument: Creating stickies map');
       this.boardMap.set('stickies', new Y.Map());
     }
     if (this.boardMap.get('shapes') === undefined) {
@@ -130,27 +132,35 @@ export class BoardDocument {
 
   // Update a sticky note
   updateStickyNote(id: string, updates: Partial<StickyNote>): void {
+    console.log('🔍 BoardDocument: updateStickyNote called', { id, updates });
     const stickies = this.boardMap.get('stickies') as Y.Map<Y.Map<any>>;
 
     if (!stickies) {
-      console.error('Board not initialized. Call initializeBoard() first.');
+      console.error('🔍 BoardDocument: Board not initialized. Call initializeBoard() first.');
       return;
     }
 
     const stickyMap = stickies.get(id);
-    if (!stickyMap) return;
+    if (!stickyMap) {
+      console.error('🔍 BoardDocument: Sticky note not found', { id });
+      return;
+    }
 
+    console.log('🔍 BoardDocument: Found sticky note, applying updates');
     Object.entries(updates).forEach(([key, value]) => {
       if (key === 'text' && typeof value === 'string') {
+        console.log('🔍 BoardDocument: Updating text', { key, value });
         const text = stickyMap.get('text') as Y.Text;
         text.delete(0, text.length);
         text.insert(0, value);
       } else if (value !== undefined) {
+        console.log('🔍 BoardDocument: Updating property', { key, value });
         stickyMap.set(key, value);
       }
     });
 
     stickyMap.set('updatedAt', Date.now());
+    console.log('🔍 BoardDocument: updateStickyNote completed');
   }
 
   // Delete a sticky note

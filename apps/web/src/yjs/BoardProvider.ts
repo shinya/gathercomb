@@ -89,7 +89,9 @@ export class BoardProvider {
 
   // Initialize board with title
   initializeBoard(title: string): void {
+    console.log('🔍 BoardProvider: initializeBoard called', { title });
     this.boardDoc.initializeBoard(title);
+    console.log('🔍 BoardProvider: initializeBoard completed');
   }
 
   // Create sticky note
@@ -99,7 +101,9 @@ export class BoardProvider {
 
   // Update sticky note
   updateStickyNote(id: string, updates: any): void {
+    console.log('🔍 BoardProvider: updateStickyNote called', { id, updates });
     this.boardDoc.updateStickyNote(id, updates);
+    console.log('🔍 BoardProvider: updateStickyNote completed');
   }
 
   // Delete sticky note

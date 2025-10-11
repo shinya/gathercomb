@@ -254,9 +254,13 @@ export const useBoardStore = create<BoardState>((set, get) => ({
   },
 
   updateStickyNoteData: (id, updates) => {
+    console.log('🔍 boardStore: updateStickyNoteData called', { id, updates });
     const { boardProvider } = get();
     if (boardProvider) {
+      console.log('🔍 boardStore: boardProvider exists, calling updateStickyNote');
       boardProvider.updateStickyNote(id, updates);
+    } else {
+      console.error('🔍 boardStore: boardProvider is null!');
     }
   },
 

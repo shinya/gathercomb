@@ -1,5 +1,5 @@
 import React, { useRef, useState, useEffect } from 'react';
-import { Stage, Layer, Group, Rect, Text, Transformer, Ellipse } from 'react-konva';
+import { Stage, Layer, Group, Rect, Text, Transformer, Ellipse, TextPath } from 'react-konva';
 import Konva from 'konva';
 import { useCanvasStore } from '../../stores/boardStore';
 import { useBoardStore } from '../../stores/boardStore';
@@ -15,6 +15,16 @@ interface CanvasProps {
 export const Canvas: React.FC<CanvasProps> = ({ width, height }) => {
   const stageRef = useRef<Konva.Stage>(null);
   const transformerRef = useRef<Konva.Transformer>(null);
+
+  // State for text editing
+  const [editingSticky, setEditingSticky] = useState<{
+    id: string;
+    text: string;
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  } | null>(null);
 
   const {
     zoom,
@@ -112,6 +122,36 @@ export const Canvas: React.FC<CanvasProps> = ({ width, height }) => {
     }
   };
 
+  // Handle sticky note double click for editing
+  const handleStickyDoubleClick = (id: string, e: Konva.KonvaEventObject<MouseEvent>) => {
+    e.cancelBubble = true;
+    const sticky = stickyNotes.get(id);
+    if (sticky) {
+      console.log('🔍 Canvas: handleStickyDoubleClick called', { id, text: sticky.text });
+      setEditingSticky({
+        id: sticky.id,
+        text: sticky.text,
+        x: sticky.x,
+        y: sticky.y,
+        width: sticky.width,
+        height: sticky.height,
+      });
+    }
+  };
+
+  const handleTextEditComplete = (newText: string) => {
+    if (editingSticky) {
+      console.log('🔍 Canvas: handleTextEditComplete called', { id: editingSticky.id, newText });
+      updateStickyNoteData(editingSticky.id, { text: newText });
+      setEditingSticky(null);
+    }
+  };
+
+  const handleTextEditCancel = () => {
+    console.log('🔍 Canvas: handleTextEditCancel called');
+    setEditingSticky(null);
+  };
+
   // Handle sticky note drag
   const handleStickyDrag = (id: string, e: Konva.KonvaEventObject<DragEvent>) => {
     const node = e.target;
@@ -146,6 +186,11 @@ export const Canvas: React.FC<CanvasProps> = ({ width, height }) => {
   // Handle keyboard events
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Don't handle delete/backspace if we're currently editing text
+      if (editingSticky) {
+        return;
+      }
+
       if (e.key === 'Delete' || e.key === 'Backspace') {
         if (selectedStickyIds.length > 0) {
           selectedStickyIds.forEach(id => {
@@ -158,7 +203,7 @@ export const Canvas: React.FC<CanvasProps> = ({ width, height }) => {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [selectedStickyIds, deleteStickyNoteData, setSelectedStickyIds]);
+  }, [selectedStickyIds, deleteStickyNoteData, setSelectedStickyIds, editingSticky]);
 
   // Update transformer when selection changes
   useEffect(() => {
@@ -389,7 +434,9 @@ export const Canvas: React.FC<CanvasProps> = ({ width, height }) => {
         key={note.id}
         note={note}
         isSelected={selectedStickyIds.includes(note.id)}
+        isEditing={editingSticky?.id === note.id}
         onClick={(e) => handleStickyClick(note.id, e)}
+        onDoubleClick={(e) => handleStickyDoubleClick(note.id, e)}
         onDragEnd={(e) => handleStickyDrag(note.id, e)}
         onContextMenu={(e) => handleContextMenu(e, note.id)}
         onTransformEnd={(e) => handleStickyTransform(note.id, e)}
@@ -450,6 +497,55 @@ export const Canvas: React.FC<CanvasProps> = ({ width, height }) => {
           />
         </Layer>
       </Stage>
+
+      {/* HTML Input Overlay for editing */}
+      {editingSticky && (
+        <div
+          style={{
+            position: 'absolute',
+            left: editingSticky.x * zoom + panX + 10,
+            top: editingSticky.y * zoom + panY + 10,
+            width: (editingSticky.width - 20) * zoom,
+            height: (editingSticky.height - 20) * zoom,
+            zIndex: 1000,
+          }}
+        >
+          <textarea
+            value={editingSticky.text}
+            onChange={(e) => {
+              console.log('🔍 Canvas: textarea onChange', { value: e.target.value });
+              setEditingSticky(prev => prev ? { ...prev, text: e.target.value } : null);
+            }}
+            onBlur={() => handleTextEditComplete(editingSticky.text)}
+            onKeyDown={(e) => {
+              // Prevent event propagation to avoid triggering canvas keyboard handlers
+              e.stopPropagation();
+
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                handleTextEditComplete(editingSticky.text);
+              } else if (e.key === 'Escape') {
+                e.preventDefault();
+                handleTextEditCancel();
+              }
+            }}
+            style={{
+              width: '100%',
+              height: '100%',
+              border: 'none',
+              outline: 'none',
+              background: 'transparent',
+              fontSize: `${14 * zoom}px`,
+              fontFamily: 'Arial, sans-serif',
+              color: '#333',
+              resize: 'none',
+              padding: 0,
+              margin: 0,
+            }}
+            autoFocus
+          />
+        </div>
+      )}
 
       {/* Toolbar */}
       <Toolbar
@@ -518,7 +614,9 @@ export const Canvas: React.FC<CanvasProps> = ({ width, height }) => {
 interface StickyNoteComponentProps {
   note: StickyNote;
   isSelected: boolean;
+  isEditing: boolean;
   onClick: (e: Konva.KonvaEventObject<MouseEvent>) => void;
+  onDoubleClick: (e: Konva.KonvaEventObject<MouseEvent>) => void;
   onDragEnd: (e: Konva.KonvaEventObject<DragEvent>) => void;
   onContextMenu: (e: Konva.KonvaEventObject<MouseEvent>) => void;
   onTransformEnd: (e: Konva.KonvaEventObject<Event>) => void;
@@ -527,14 +625,15 @@ interface StickyNoteComponentProps {
 const StickyNoteComponent: React.FC<StickyNoteComponentProps> = ({
   note,
   isSelected,
+  isEditing,
   onClick,
+  onDoubleClick,
   onDragEnd,
   onContextMenu,
   onTransformEnd,
 }) => {
-  const [isEditing, setIsEditing] = useState(false);
   const [editText, setEditText] = useState(note.text);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const textRef = useRef<Konva.Text>(null);
   const { zoom, panX, panY } = useCanvasStore();
 
   // Update edit text when note text changes
@@ -542,46 +641,9 @@ const StickyNoteComponent: React.FC<StickyNoteComponentProps> = ({
     setEditText(note.text);
   }, [note.text]);
 
-  // Focus textarea when editing starts
-  useEffect(() => {
-    if (isEditing && textareaRef.current) {
-      textareaRef.current.focus();
-      textareaRef.current.select();
-    }
-  }, [isEditing]);
 
-  const handleTextClick = (e: Konva.KonvaEventObject<MouseEvent>) => {
-    e.cancelBubble = true;
-    setIsEditing(true);
-  };
 
-  const handleDoubleClick = (e: Konva.KonvaEventObject<MouseEvent>) => {
-    e.cancelBubble = true;
-    setIsEditing(true);
-  };
 
-  const handleTextBlur = () => {
-    setIsEditing(false);
-    if (editText !== note.text) {
-      // Update text in store
-      const { updateStickyNoteData } = useBoardStore.getState();
-      updateStickyNoteData(note.id, { text: editText });
-    }
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleTextBlur();
-    } else if (e.key === 'Escape') {
-      setEditText(note.text);
-      setIsEditing(false);
-    }
-  };
-
-  const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setEditText(e.target.value);
-  };
 
   return (
     <>
@@ -593,7 +655,7 @@ const StickyNoteComponent: React.FC<StickyNoteComponentProps> = ({
         height={note.height}
         draggable
         onClick={onClick}
-        onDblClick={handleDoubleClick}
+        onDblClick={onDoubleClick}
         onDragEnd={onDragEnd}
         onContextMenu={onContextMenu}
         onTransformEnd={onTransformEnd}
@@ -614,58 +676,21 @@ const StickyNoteComponent: React.FC<StickyNoteComponentProps> = ({
 
         {/* Text */}
         <Text
+          ref={textRef}
           x={10}
           y={10}
           width={note.width - 20}
           height={note.height - 20}
-          text={isEditing ? '' : note.text}
+          text={isEditing ? '' : editText}
           fontSize={14}
           fontFamily="Arial, sans-serif"
           fill="#333"
           wrap="word"
           align="left"
           verticalAlign="top"
-          onClick={handleTextClick}
-          visible={!isEditing}
+          listening={!isEditing}
         />
       </Group>
-
-      {/* HTML Textarea for editing */}
-      {isEditing && (
-        <div
-          style={{
-            position: 'absolute',
-            left: (note.x + 10) * zoom + panX,
-            top: (note.y + 10) * zoom + panY,
-            width: (note.width - 20) * zoom,
-            height: (note.height - 20) * zoom,
-            zIndex: 1000,
-            pointerEvents: 'auto',
-          }}
-        >
-          <textarea
-            ref={textareaRef}
-            value={editText}
-            onChange={handleTextChange}
-            onBlur={handleTextBlur}
-            onKeyDown={handleKeyDown}
-            style={{
-              width: '100%',
-              height: '100%',
-              border: 'none',
-              outline: 'none',
-              background: 'transparent',
-              fontSize: `${14 * zoom}px`,
-              fontFamily: 'Arial, sans-serif',
-              color: '#333',
-              resize: 'none',
-              padding: '0',
-              margin: '0',
-              overflow: 'hidden',
-            }}
-          />
-        </div>
-      )}
     </>
   );
 };
