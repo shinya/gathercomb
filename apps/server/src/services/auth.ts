@@ -3,7 +3,7 @@ import jwt from 'jsonwebtoken';
 import { v4 as uuidv4 } from 'uuid';
 import { config } from '../utils/config.js';
 import { CustomError } from '../middleware/errorHandler.js';
-import { CreateUser, Login, User } from '@gathercomb/shared';
+import { CreateUser, Login, User } from '../../../../packages/shared/dist/index.js';
 import { emailService } from './email.js';
 import { queryOne } from '../utils/database.js';
 

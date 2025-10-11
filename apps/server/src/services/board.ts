@@ -1,6 +1,6 @@
 import { v4 as uuidv4 } from 'uuid';
 import { CustomError } from '../middleware/errorHandler.js';
-import { CreateBoard, CreateMembership, Board } from '@gathercomb/shared';
+import { CreateBoard, CreateMembership, Board } from '../../../../packages/shared/dist/index.js';
 import { emailService } from './email.js';
 import { queryOne, queryMany } from '../utils/database.js';
 

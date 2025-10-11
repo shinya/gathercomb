@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { authService } from '../services/auth.js';
 import { CustomError } from '../middleware/errorHandler.js';
-import { LoginSchema, CreateUserSchema } from '@gathercomb/shared';
+import { LoginSchema, CreateUserSchema } from '../../../../packages/shared/dist/index.js';
 
 const router = Router();
 

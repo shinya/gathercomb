@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { boardService } from '../services/board.js';
 import { authService } from '../services/auth.js';
 import { CustomError } from '../middleware/errorHandler.js';
-import { CreateBoardSchema, CreateMembershipSchema } from '@gathercomb/shared';
+import { CreateBoardSchema, CreateMembershipSchema } from '../../../../packages/shared/dist/index.js';
 
 const router = Router();
 
