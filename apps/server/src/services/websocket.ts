@@ -1,17 +1,15 @@
-import { WebSocketServer, WebSocket } from 'ws';
+import { WebSocketServer } from 'ws';
+import { setupWSConnection } from 'y-websocket/bin/utils';
 import { logger } from '../utils/logger.js';
 import { getBoardPersistence } from './persistence.js';
-
-// Store active rooms
-const rooms = new Map<string, Set<WebSocket>>();
 
 // Store board persistence for each room
 const roomPersistence = new Map<string, any>();
 
 export const setupWebSocketServer = (wss: WebSocketServer): void => {
-  logger.info('Setting up WebSocket server');
+  logger.info('Setting up Yjs WebSocket server');
 
-  wss.on('connection', (ws: WebSocket, req) => {
+  wss.on('connection', (ws, req) => {
     try {
       const url = new URL(req.url!, `http://${req.headers.host}`);
       const room = url.pathname.split('/').pop();
@@ -25,7 +23,7 @@ export const setupWebSocketServer = (wss: WebSocketServer): void => {
       // Extract board ID from room (format: board:boardId)
       const boardId = room.startsWith('board:') ? room.substring(6) : room;
 
-      logger.info({ room, boardId, clientIP: req.socket.remoteAddress }, 'WebSocket connection established');
+      logger.info({ room, boardId, clientIP: req.socket.remoteAddress }, 'Yjs WebSocket connection established');
 
       // Initialize or get board persistence
       if (!roomPersistence.has(room)) {
@@ -34,82 +32,37 @@ export const setupWebSocketServer = (wss: WebSocketServer): void => {
       }
       const persistence = roomPersistence.get(room);
 
-      // Add to room
-      if (!rooms.has(room)) {
-        rooms.set(room, new Set());
-      }
-      rooms.get(room)!.add(ws);
-
-      // Send current state to new client
-      const currentState = persistence.getStateAsUpdate();
-      if (currentState.length > 0) {
-        ws.send(currentState);
-      }
-
-      // Handle Yjs messages
-      ws.on('message', (data: Buffer) => {
-        try {
-          const update = new Uint8Array(data);
-
-          // Apply update to persistence
-          persistence.applyUpdate(update);
-
-          // Broadcast to other clients in the same room
-          const roomClients = rooms.get(room);
-          if (roomClients) {
-            roomClients.forEach(client => {
-              if (client !== ws && client.readyState === WebSocket.OPEN) {
-                client.send(data);
-              }
-            });
-          }
-
-          logger.debug({ room, boardId, messageSize: data.length }, 'Processed and broadcasted Yjs update');
-        } catch (error) {
-          logger.error({ error, room, boardId }, 'Error handling Yjs message');
-        }
-      });
-
-      ws.on('close', () => {
-        logger.info({ room, boardId }, 'WebSocket connection closed');
-
-        // Remove from room
-        const roomClients = rooms.get(room);
-        if (roomClients) {
-          roomClients.delete(ws);
-          if (roomClients.size === 0) {
-            rooms.delete(room);
-            // Clean up persistence when no clients remain
-            const persistence = roomPersistence.get(room);
-            if (persistence) {
-              persistence.destroy();
-              roomPersistence.delete(room);
+      // Setup Yjs WebSocket connection with custom persistence
+      setupWSConnection(ws, req, {
+        // Custom persistence provider
+        persistence: {
+          bindState: (roomName: string, doc: any) => {
+            logger.debug({ room: roomName }, 'Binding state for room');
+            const currentState = persistence.getStateAsUpdate();
+            if (currentState.length > 0) {
+              doc.applyUpdate(currentState);
             }
-          }
-        }
-      });
-
-      ws.on('error', (error) => {
-        logger.error({ error, room, boardId }, 'WebSocket error');
-
-        // Remove from room on error
-        const roomClients = rooms.get(room);
-        if (roomClients) {
-          roomClients.delete(ws);
-          if (roomClients.size === 0) {
-            rooms.delete(room);
-            // Clean up persistence when no clients remain
-            const persistence = roomPersistence.get(room);
-            if (persistence) {
-              persistence.destroy();
-              roomPersistence.delete(room);
-            }
+          },
+          writeState: (roomName: string, doc: any) => {
+            logger.debug({ room: roomName }, 'Writing state for room');
+            const update = doc.getStateAsUpdate();
+            persistence.applyUpdate(update);
+            return Promise.resolve();
+          },
+          onUpdate: (roomName: string, update: Uint8Array) => {
+            logger.debug({ room: roomName, updateSize: update.length }, 'Received update for room');
+            persistence.applyUpdate(update);
+          },
+          destroy: () => {
+            logger.debug({ room }, 'Destroying persistence for room');
+            persistence.destroy();
+            roomPersistence.delete(room);
           }
         }
       });
 
     } catch (error) {
-      logger.error({ error }, 'Error handling WebSocket connection');
+      logger.error({ error }, 'Error setting up Yjs WebSocket connection');
       ws.close();
     }
   });

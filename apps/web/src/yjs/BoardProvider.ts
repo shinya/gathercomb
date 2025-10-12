@@ -30,7 +30,6 @@ export class BoardProvider {
     // Wait for IndexedDB to load
     await new Promise<void>((resolve) => {
       this.indexeddbProvider!.on('synced', () => {
-        console.log('IndexedDB synced');
         resolve();
       });
     });
@@ -43,19 +42,29 @@ export class BoardProvider {
 
     // Handle connection events
     this.wsProvider.on('status', (event: any) => {
-      console.log('WebSocket status:', event);
       this._isConnected = event.status === 'connected';
     });
 
     this.wsProvider.on('connection-close', (event: any) => {
-      console.log('WebSocket connection closed:', event);
       this._isConnected = false;
     });
 
     this.wsProvider.on('connection-error', (event: any) => {
-      console.log('WebSocket connection error:', event);
       this._isConnected = false;
     });
+
+    // Handle WebSocket message errors (suppress "Unknown message type" errors)
+    this.wsProvider.on('message', (event: any) => {
+      // This event handler can be used to filter out problematic messages
+      // The actual message handling is done internally by y-websocket
+    });
+
+    // Add error handling for the WebSocket connection
+    if (this.wsProvider.ws) {
+      this.wsProvider.ws.addEventListener('error', (event) => {
+        console.error('WebSocket error:', event);
+      });
+    }
 
     // Set initial connection state
     this._isConnected = this.wsProvider.wsconnected || false;
@@ -89,9 +98,7 @@ export class BoardProvider {
 
   // Initialize board with title
   initializeBoard(title: string): void {
-    console.log('🔍 BoardProvider: initializeBoard called', { title });
     this.boardDoc.initializeBoard(title);
-    console.log('🔍 BoardProvider: initializeBoard completed');
   }
 
   // Create sticky note
@@ -101,9 +108,7 @@ export class BoardProvider {
 
   // Update sticky note
   updateStickyNote(id: string, updates: any): void {
-    console.log('🔍 BoardProvider: updateStickyNote called', { id, updates });
     this.boardDoc.updateStickyNote(id, updates);
-    console.log('🔍 BoardProvider: updateStickyNote completed');
   }
 
   // Delete sticky note

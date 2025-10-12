@@ -7,6 +7,182 @@ import { StickyNote, Rectangle, Circle, TextShape, DEFAULT_STICKY_SIZE, DEFAULT_
 import { Toolbar } from './Toolbar';
 import { ContextMenu } from './ContextMenu';
 
+// StickyNote Textarea Component
+interface StickyNoteTextareaProps {
+  editingSticky: {
+    id: string;
+    text: string;
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  };
+  onTextChange: (text: string) => void;
+  onComplete: () => void;
+  onCancel: () => void;
+  zoom: number;
+  panX: number;
+  panY: number;
+}
+
+const StickyNoteTextarea: React.FC<StickyNoteTextareaProps> = ({
+  editingSticky,
+  onTextChange,
+  onComplete,
+  onCancel,
+  zoom,
+  panX,
+  panY,
+}) => {
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Focus and move cursor to end when component mounts
+  useEffect(() => {
+    if (textareaRef.current) {
+      textareaRef.current.focus();
+      // Move cursor to end of text
+      const textLength = editingSticky.text.length;
+      textareaRef.current.setSelectionRange(textLength, textLength);
+    }
+  }, []);
+
+  return (
+    <div
+      style={{
+        position: 'absolute',
+        left: editingSticky.x * zoom + panX + 10,
+        top: editingSticky.y * zoom + panY + 10,
+        width: (editingSticky.width - 20) * zoom,
+        height: (editingSticky.height - 20) * zoom,
+        zIndex: 1000,
+      }}
+    >
+      <textarea
+        ref={textareaRef}
+        value={editingSticky.text}
+        onChange={(e) => {
+          onTextChange(e.target.value);
+        }}
+        onBlur={onComplete}
+        onKeyDown={(e) => {
+          // Prevent event propagation to avoid triggering canvas keyboard handlers
+          e.stopPropagation();
+
+          if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            onComplete();
+          } else if (e.key === 'Escape') {
+            e.preventDefault();
+            onCancel();
+          }
+        }}
+        style={{
+          width: '100%',
+          height: '100%',
+          border: 'none',
+          outline: 'none',
+          background: 'transparent',
+          fontSize: `${14 * zoom}px`,
+          fontFamily: 'Arial, sans-serif',
+          color: '#333',
+          resize: 'none',
+          padding: 0,
+          margin: 0,
+          textAlign: 'center',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      />
+    </div>
+  );
+};
+
+// TextShape Textarea Component
+interface TextShapeTextareaProps {
+  editingTextShape: {
+    id: string;
+    text: string;
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  };
+  onTextChange: (text: string) => void;
+  onComplete: () => void;
+  onCancel: () => void;
+  zoom: number;
+  panX: number;
+  panY: number;
+}
+
+const TextShapeTextarea: React.FC<TextShapeTextareaProps> = ({
+  editingTextShape,
+  onTextChange,
+  onComplete,
+  onCancel,
+  zoom,
+  panX,
+  panY,
+}) => {
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Focus and select all text when component mounts
+  useEffect(() => {
+    if (textareaRef.current) {
+      textareaRef.current.focus();
+      textareaRef.current.select();
+    }
+  }, []);
+
+  return (
+    <div
+      style={{
+        position: 'absolute',
+        left: editingTextShape.x * zoom + panX,
+        top: editingTextShape.y * zoom + panY,
+        width: editingTextShape.width * zoom,
+        height: editingTextShape.height * zoom,
+        zIndex: 1000,
+      }}
+    >
+      <textarea
+        ref={textareaRef}
+        value={editingTextShape.text}
+        onChange={(e) => {
+          onTextChange(e.target.value);
+        }}
+        onBlur={onComplete}
+        onKeyDown={(e) => {
+          // Prevent event propagation to avoid triggering canvas keyboard handlers
+          e.stopPropagation();
+
+          if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            onComplete();
+          } else if (e.key === 'Escape') {
+            e.preventDefault();
+            onCancel();
+          }
+        }}
+        style={{
+          width: '100%',
+          height: '100%',
+          border: 'none',
+          outline: 'none',
+          background: 'transparent',
+          fontSize: `${14 * zoom}px`,
+          fontFamily: 'Arial, sans-serif',
+          color: '#333',
+          resize: 'none',
+          padding: 0,
+          margin: 0,
+        }}
+      />
+    </div>
+  );
+};
+
 interface CanvasProps {
   width: number;
   height: number;
@@ -18,6 +194,15 @@ export const Canvas: React.FC<CanvasProps> = ({ width, height }) => {
 
   // State for text editing
   const [editingSticky, setEditingSticky] = useState<{
+    id: string;
+    text: string;
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  } | null>(null);
+
+  const [editingTextShape, setEditingTextShape] = useState<{
     id: string;
     text: string;
     x: number;
@@ -127,7 +312,6 @@ export const Canvas: React.FC<CanvasProps> = ({ width, height }) => {
     e.cancelBubble = true;
     const sticky = stickyNotes.get(id);
     if (sticky) {
-      console.log('🔍 Canvas: handleStickyDoubleClick called', { id, text: sticky.text });
       setEditingSticky({
         id: sticky.id,
         text: sticky.text,
@@ -141,15 +325,40 @@ export const Canvas: React.FC<CanvasProps> = ({ width, height }) => {
 
   const handleTextEditComplete = (newText: string) => {
     if (editingSticky) {
-      console.log('🔍 Canvas: handleTextEditComplete called', { id: editingSticky.id, newText });
       updateStickyNoteData(editingSticky.id, { text: newText });
       setEditingSticky(null);
     }
   };
 
   const handleTextEditCancel = () => {
-    console.log('🔍 Canvas: handleTextEditCancel called');
     setEditingSticky(null);
+  };
+
+  // Handle text shape double click for editing
+  const handleTextShapeDoubleClick = (id: string, e: Konva.KonvaEventObject<MouseEvent>) => {
+    e.cancelBubble = true;
+    const textShape = shapes.get(id);
+    if (textShape) {
+      setEditingTextShape({
+        id: textShape.id,
+        text: textShape.text,
+        x: textShape.x,
+        y: textShape.y,
+        width: textShape.width,
+        height: textShape.height,
+      });
+    }
+  };
+
+  const handleTextShapeEditComplete = (newText: string) => {
+    if (editingTextShape) {
+      updateShapeData(editingTextShape.id, { text: newText });
+      setEditingTextShape(null);
+    }
+  };
+
+  const handleTextShapeEditCancel = () => {
+    setEditingTextShape(null);
   };
 
   // Handle sticky note drag
@@ -187,7 +396,7 @@ export const Canvas: React.FC<CanvasProps> = ({ width, height }) => {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       // Don't handle delete/backspace if we're currently editing text
-      if (editingSticky) {
+      if (editingSticky || editingTextShape) {
         return;
       }
 
@@ -203,7 +412,7 @@ export const Canvas: React.FC<CanvasProps> = ({ width, height }) => {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [selectedStickyIds, deleteStickyNoteData, setSelectedStickyIds, editingSticky]);
+  }, [selectedStickyIds, deleteStickyNoteData, setSelectedStickyIds, editingSticky, editingTextShape]);
 
   // Update transformer when selection changes
   useEffect(() => {
@@ -388,7 +597,9 @@ export const Canvas: React.FC<CanvasProps> = ({ width, height }) => {
             key={shape.id}
             shape={shape as TextShape}
             isSelected={selectedStickyIds.includes(shape.id)}
+            isEditing={editingTextShape?.id === shape.id}
             onClick={(e) => handleStickyClick(shape.id, e)}
+            onDoubleClick={(e) => handleTextShapeDoubleClick(shape.id, e)}
             onDragEnd={(e) => handleShapeDrag(shape.id, e)}
             onContextMenu={(e) => handleContextMenu(e, undefined, shape.id)}
             onTransformEnd={(e) => handleShapeTransform(shape.id, e)}
@@ -498,53 +709,34 @@ export const Canvas: React.FC<CanvasProps> = ({ width, height }) => {
         </Layer>
       </Stage>
 
-      {/* HTML Input Overlay for editing */}
+      {/* HTML Input Overlay for editing sticky notes */}
       {editingSticky && (
-        <div
-          style={{
-            position: 'absolute',
-            left: editingSticky.x * zoom + panX + 10,
-            top: editingSticky.y * zoom + panY + 10,
-            width: (editingSticky.width - 20) * zoom,
-            height: (editingSticky.height - 20) * zoom,
-            zIndex: 1000,
+        <StickyNoteTextarea
+          editingSticky={editingSticky}
+          onTextChange={(text) => {
+            setEditingSticky(prev => prev ? { ...prev, text } : null);
           }}
-        >
-          <textarea
-            value={editingSticky.text}
-            onChange={(e) => {
-              console.log('🔍 Canvas: textarea onChange', { value: e.target.value });
-              setEditingSticky(prev => prev ? { ...prev, text: e.target.value } : null);
-            }}
-            onBlur={() => handleTextEditComplete(editingSticky.text)}
-            onKeyDown={(e) => {
-              // Prevent event propagation to avoid triggering canvas keyboard handlers
-              e.stopPropagation();
+          onComplete={() => handleTextEditComplete(editingSticky.text)}
+          onCancel={handleTextEditCancel}
+          zoom={zoom}
+          panX={panX}
+          panY={panY}
+        />
+      )}
 
-              if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                handleTextEditComplete(editingSticky.text);
-              } else if (e.key === 'Escape') {
-                e.preventDefault();
-                handleTextEditCancel();
-              }
-            }}
-            style={{
-              width: '100%',
-              height: '100%',
-              border: 'none',
-              outline: 'none',
-              background: 'transparent',
-              fontSize: `${14 * zoom}px`,
-              fontFamily: 'Arial, sans-serif',
-              color: '#333',
-              resize: 'none',
-              padding: 0,
-              margin: 0,
-            }}
-            autoFocus
-          />
-        </div>
+      {/* HTML Input Overlay for editing text shapes */}
+      {editingTextShape && (
+        <TextShapeTextarea
+          editingTextShape={editingTextShape}
+          onTextChange={(text) => {
+            setEditingTextShape(prev => prev ? { ...prev, text } : null);
+          }}
+          onComplete={() => handleTextShapeEditComplete(editingTextShape.text)}
+          onCancel={handleTextShapeEditCancel}
+          zoom={zoom}
+          panX={panX}
+          panY={panY}
+        />
       )}
 
       {/* Toolbar */}
@@ -686,8 +878,8 @@ const StickyNoteComponent: React.FC<StickyNoteComponentProps> = ({
           fontFamily="Arial, sans-serif"
           fill="#333"
           wrap="word"
-          align="left"
-          verticalAlign="top"
+          align="center"
+          verticalAlign="middle"
           listening={!isEditing}
         />
       </Group>
@@ -791,7 +983,9 @@ const CircleComponent: React.FC<CircleComponentProps> = ({
 interface TextShapeComponentProps {
   shape: TextShape;
   isSelected: boolean;
+  isEditing: boolean;
   onClick: (e: Konva.KonvaEventObject<MouseEvent>) => void;
+  onDoubleClick: (e: Konva.KonvaEventObject<MouseEvent>) => void;
   onDragEnd: (e: Konva.KonvaEventObject<DragEvent>) => void;
   onContextMenu: (e: Konva.KonvaEventObject<MouseEvent>) => void;
   onTransformEnd: (e: Konva.KonvaEventObject<Event>) => void;
@@ -800,61 +994,14 @@ interface TextShapeComponentProps {
 const TextShapeComponent: React.FC<TextShapeComponentProps> = ({
   shape,
   isSelected,
+  isEditing,
   onClick,
+  onDoubleClick,
   onDragEnd,
   onContextMenu,
   onTransformEnd,
 }) => {
-  const [isEditing, setIsEditing] = useState(false);
-  const [editText, setEditText] = useState(shape.text);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const { zoom, panX, panY } = useCanvasStore();
-
-  // Update edit text when shape text changes
-  useEffect(() => {
-    setEditText(shape.text);
-  }, [shape.text]);
-
-  // Focus textarea when editing starts
-  useEffect(() => {
-    if (isEditing && textareaRef.current) {
-      textareaRef.current.focus();
-      textareaRef.current.select();
-    }
-  }, [isEditing]);
-
-  const handleTextClick = (e: Konva.KonvaEventObject<MouseEvent>) => {
-    e.cancelBubble = true;
-    setIsEditing(true);
-  };
-
-  const handleDoubleClick = (e: Konva.KonvaEventObject<MouseEvent>) => {
-    e.cancelBubble = true;
-    setIsEditing(true);
-  };
-
-  const handleTextBlur = () => {
-    setIsEditing(false);
-    if (editText !== shape.text) {
-      // Update text in store
-      const { updateShapeData } = useBoardStore.getState();
-      updateShapeData(shape.id, { text: editText });
-    }
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleTextBlur();
-    } else if (e.key === 'Escape') {
-      setEditText(shape.text);
-      setIsEditing(false);
-    }
-  };
-
-  const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setEditText(e.target.value);
-  };
 
   return (
     <>
@@ -866,7 +1013,7 @@ const TextShapeComponent: React.FC<TextShapeComponentProps> = ({
         height={shape.height}
         draggable
         onClick={onClick}
-        onDblClick={handleDoubleClick}
+        onDblClick={onDoubleClick}
         onDragEnd={onDragEnd}
         onContextMenu={onContextMenu}
         onTransformEnd={onTransformEnd}
@@ -883,49 +1030,11 @@ const TextShapeComponent: React.FC<TextShapeComponentProps> = ({
           wrap="word"
           align="left"
           verticalAlign="top"
-          onClick={handleTextClick}
-          visible={!isEditing}
+          listening={!isEditing}
           stroke={isSelected ? '#007bff' : 'transparent'}
           strokeWidth={isSelected ? 1 : 0}
         />
       </Group>
-
-      {/* HTML Textarea for editing */}
-      {isEditing && (
-        <div
-          style={{
-            position: 'absolute',
-            left: shape.x * zoom + panX,
-            top: shape.y * zoom + panY,
-            width: shape.width * zoom,
-            height: shape.height * zoom,
-            zIndex: 1000,
-            pointerEvents: 'auto',
-          }}
-        >
-          <textarea
-            ref={textareaRef}
-            value={editText}
-            onChange={handleTextChange}
-            onBlur={handleTextBlur}
-            onKeyDown={handleKeyDown}
-            style={{
-              width: '100%',
-              height: '100%',
-              border: 'none',
-              outline: 'none',
-              background: 'transparent',
-              fontSize: `${shape.fontSize * zoom}px`,
-              fontFamily: shape.fontFamily,
-              color: shape.fill,
-              resize: 'none',
-              padding: '0',
-              margin: '0',
-              overflow: 'hidden',
-            }}
-          />
-        </div>
-      )}
     </>
   );
 };
