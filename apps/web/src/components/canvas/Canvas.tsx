@@ -665,12 +665,19 @@ export const Canvas: React.FC<CanvasProps> = ({ width, height }) => {
     node.scaleX(1);
     node.scaleY(1);
 
-    const newWidth = Math.max(50, node.width() * scaleX);
-    const newHeight = Math.max(50, node.height() * scaleY);
+    // Use the smaller scale to maintain square aspect ratio
+    const scale = Math.min(scaleX, scaleY);
+    const size = Math.max(50, node.width() * scale);
+
+    node.width(size);
+    node.height(size);
 
     updateStickyNoteData(id, {
-      width: newWidth,
-      height: newHeight,
+      x: node.x(),
+      y: node.y(),
+      width: size,
+      height: size,
+      rotation: node.rotation(),
     });
   };
 
@@ -698,12 +705,19 @@ export const Canvas: React.FC<CanvasProps> = ({ width, height }) => {
           {renderShapes()}
           <Transformer
             ref={transformerRef}
+            keepRatio={true}
             boundBoxFunc={(oldBox, newBox) => {
-              // Limit resize
+              // Limit resize (minimum 50x50 for square)
               if (newBox.width < 50 || newBox.height < 50) {
                 return oldBox;
               }
-              return newBox;
+              // Ensure square aspect ratio
+              const size = Math.min(newBox.width, newBox.height);
+              return {
+                ...newBox,
+                width: size,
+                height: size,
+              };
             }}
           />
         </Layer>

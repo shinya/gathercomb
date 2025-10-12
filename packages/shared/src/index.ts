@@ -68,7 +68,7 @@ export const CreateStickyNoteSchema = z.object({
   x: z.number(),
   y: z.number(),
   width: z.number().positive().default(200),
-  height: z.number().positive().default(150),
+  height: z.number().positive().default(200),
 });
 
 export const UpdateStickyNoteSchema = z.object({
@@ -212,7 +212,7 @@ export type ToolType = 'select' | 'sticky' | 'rectangle' | 'circle' | 'text';
 
 export const DEFAULT_STICKY_SIZE = {
   width: 200,
-  height: 150,
+  height: 200,
 } as const;
 
 export const DEFAULT_SHAPE_SIZE = {
