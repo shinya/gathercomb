@@ -374,10 +374,7 @@ export const Canvas: React.FC<CanvasProps> = ({ width, height }) => {
   const handleStageDragStart = (e: Konva.KonvaEventObject<DragEvent>) => {
     // Only allow panning if clicking on the stage itself (not on a sticky note)
     if (e.target === e.target.getStage()) {
-      const stage = e.target.getStage();
-      if (stage) {
-        stage.setDraggable(true);
-      }
+      // Stage is already draggable, no need to set it again
     }
   };
 
@@ -389,7 +386,6 @@ export const Canvas: React.FC<CanvasProps> = ({ width, height }) => {
     const newY = stage.y();
 
     setPan(newX, newY);
-    stage.setDraggable(false);
   };
 
   // Handle keyboard events
@@ -426,10 +422,14 @@ export const Canvas: React.FC<CanvasProps> = ({ width, height }) => {
       const node = stage.findOne(`#${selectedStickyIds[0]}`);
       if (node) {
         transformer.nodes([node]);
+        // Enable listening for transformer when an object is selected
+        transformer.listening(true);
         transformer.getLayer()?.batchDraw();
       }
     } else {
       transformer.nodes([]);
+      // Disable listening when no objects are selected
+      transformer.listening(false);
       transformer.getLayer()?.batchDraw();
     }
   }, [selectedStickyIds]);
@@ -706,6 +706,7 @@ export const Canvas: React.FC<CanvasProps> = ({ width, height }) => {
           <Transformer
             ref={transformerRef}
             keepRatio={true}
+            listening={false}
             boundBoxFunc={(oldBox, newBox) => {
               // Limit resize (minimum 50x50 for square)
               if (newBox.width < 50 || newBox.height < 50) {
