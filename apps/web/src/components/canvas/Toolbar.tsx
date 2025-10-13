@@ -1,6 +1,44 @@
 import React from 'react';
 import { STICKY_COLORS, ToolType } from '@gathercomb/shared';
 
+// SVG Icon Components
+const SelectIcon: React.FC<{ size?: number; color?: string }> = ({ size = 20, color = 'currentColor' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z"/>
+    <path d="M13 13l6 6"/>
+  </svg>
+);
+
+const StickyNoteIcon: React.FC<{ size?: number; color?: string }> = ({ size = 20, color = 'currentColor' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/>
+    <polyline points="14,2 14,8 20,8"/>
+    <line x1="16" y1="13" x2="8" y2="13"/>
+    <line x1="16" y1="17" x2="8" y2="17"/>
+    <polyline points="10,9 9,9 8,9"/>
+  </svg>
+);
+
+const RectangleIcon: React.FC<{ size?: number; color?: string }> = ({ size = 20, color = 'currentColor' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+  </svg>
+);
+
+const CircleIcon: React.FC<{ size?: number; color?: string }> = ({ size = 20, color = 'currentColor' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="12" cy="12" r="10"/>
+  </svg>
+);
+
+const TextIcon: React.FC<{ size?: number; color?: string }> = ({ size = 20, color = 'currentColor' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="4,7 4,4 20,4 20,7"/>
+    <line x1="9" y1="20" x2="15" y2="20"/>
+    <line x1="12" y1="4" x2="12" y2="20"/>
+  </svg>
+);
+
 interface ToolbarProps {
   selectedTool: ToolType;
   selectedColor: string;
@@ -21,11 +59,11 @@ export const Toolbar: React.FC<ToolbarProps> = ({
   onCreateTextShape,
 }) => {
   const tools = [
-    { id: 'select', icon: '↖️', label: 'Select', action: null },
-    { id: 'sticky', icon: '📝', label: 'Sticky Note', action: onCreateSticky },
-    { id: 'rectangle', icon: '⬜', label: 'Rectangle', action: onCreateRectangle },
-    { id: 'circle', icon: '⭕', label: 'Circle', action: onCreateCircle },
-    { id: 'text', icon: '📄', label: 'Text', action: onCreateTextShape },
+    { id: 'select', icon: SelectIcon, label: 'Select', action: null },
+    { id: 'sticky', icon: StickyNoteIcon, label: 'Sticky Note', action: onCreateSticky },
+    { id: 'rectangle', icon: RectangleIcon, label: 'Rectangle', action: onCreateRectangle },
+    { id: 'circle', icon: CircleIcon, label: 'Circle', action: onCreateCircle },
+    { id: 'text', icon: TextIcon, label: 'Text', action: onCreateTextShape },
   ] as const;
 
   return (
@@ -50,40 +88,46 @@ export const Toolbar: React.FC<ToolbarProps> = ({
         alignItems: 'center',
         gap: '8px',
       }}>
-        {tools.map((tool) => (
-          <button
-            key={tool.id}
-            onClick={tool.action || undefined}
-            style={{
-              width: '40px',
-              height: '40px',
-              border: 'none',
-              borderRadius: '8px',
-              backgroundColor: selectedTool === tool.id ? '#007bff' : 'transparent',
-              color: selectedTool === tool.id ? 'white' : '#333',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: '18px',
-              transition: 'all 0.2s ease',
-              position: 'relative',
-            }}
-            title={tool.label}
-            onMouseEnter={(e) => {
-              if (selectedTool !== tool.id) {
-                e.currentTarget.style.backgroundColor = '#f0f0f0';
-              }
-            }}
-            onMouseLeave={(e) => {
-              if (selectedTool !== tool.id) {
-                e.currentTarget.style.backgroundColor = 'transparent';
-              }
-            }}
-          >
-            {tool.icon}
-          </button>
-        ))}
+        {tools.map((tool) => {
+          const IconComponent = tool.icon;
+          return (
+            <button
+              key={tool.id}
+              onClick={tool.action || undefined}
+              style={{
+                width: '40px',
+                height: '40px',
+                border: 'none',
+                borderRadius: '8px',
+                backgroundColor: selectedTool === tool.id ? '#007bff' : 'transparent',
+                color: selectedTool === tool.id ? 'white' : '#333',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '18px',
+                transition: 'all 0.2s ease',
+                position: 'relative',
+              }}
+              title={tool.label}
+              onMouseEnter={(e) => {
+                if (selectedTool !== tool.id) {
+                  e.currentTarget.style.backgroundColor = '#f0f0f0';
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (selectedTool !== tool.id) {
+                  e.currentTarget.style.backgroundColor = 'transparent';
+                }
+              }}
+            >
+              <IconComponent
+                size={20}
+                color={selectedTool === tool.id ? 'white' : '#333'}
+              />
+            </button>
+          );
+        })}
       </div>
 
       {/* Divider */}
