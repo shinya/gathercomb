@@ -28,6 +28,8 @@ services:
       - ./apps/server:/app/apps/server
       - ./packages/shared:/app/packages/shared
       - ./data:/app/data
+      - /app/apps/server/node_modules
+      - /app/packages/shared/node_modules
     restart: unless-stopped
 
   frontend:
@@ -42,6 +44,8 @@ services:
     volumes:
       - ./apps/web:/app/apps/web
       - ./packages/shared:/app/packages/shared
+      - /app/apps/web/node_modules
+      - /app/packages/shared/node_modules
     restart: unless-stopped
 
   db:

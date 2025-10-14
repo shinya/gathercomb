@@ -59,7 +59,11 @@ export const StickyNoteSchema = z.object({
   height: z.number().positive(),
   rotation: z.number(),
   zIndex: z.number(),
+  fontSize: z.number().positive(),
+  textColor: z.string(),
   createdBy: z.string().uuid(),
+  createdAt: z.number(),
+  updatedAt: z.number(),
 });
 
 export const CreateStickyNoteSchema = z.object({
@@ -69,6 +73,8 @@ export const CreateStickyNoteSchema = z.object({
   y: z.number(),
   width: z.number().positive().default(200),
   height: z.number().positive().default(200),
+  fontSize: z.number().positive().default(14),
+  textColor: z.string().default('#333'),
 });
 
 export const UpdateStickyNoteSchema = z.object({
@@ -80,6 +86,8 @@ export const UpdateStickyNoteSchema = z.object({
   height: z.number().positive().optional(),
   rotation: z.number().optional(),
   zIndex: z.number().optional(),
+  fontSize: z.number().positive().optional(),
+  textColor: z.string().optional(),
 });
 
 // Awareness related schemas
@@ -170,6 +178,20 @@ export const STICKY_COLORS = [
   '#54a0ff', // Light Blue
 ] as const;
 
+export const FONT_SIZES = [12, 14, 16, 18, 24, 32] as const;
+
+export const STROKE_COLORS = [
+  '#000000', // Black
+  '#333333', // Dark Gray
+  '#666666', // Gray
+  '#999999', // Light Gray
+  '#cccccc', // Very Light Gray
+  '#ffffff', // White
+  '#ff0000', // Red
+  '#00ff00', // Green
+  '#0000ff', // Blue
+] as const;
+
 // Shape types
 export type ShapeType = 'sticky' | 'rectangle' | 'circle' | 'text';
 
@@ -190,6 +212,9 @@ export interface Rectangle extends BaseShape {
   fill: string;
   stroke: string;
   strokeWidth: number;
+  text: string;
+  fontSize: number;
+  textColor: string;
 }
 
 export interface Circle extends BaseShape {
@@ -197,6 +222,9 @@ export interface Circle extends BaseShape {
   fill: string;
   stroke: string;
   strokeWidth: number;
+  text: string;
+  fontSize: number;
+  textColor: string;
 }
 
 export interface TextShape extends BaseShape {
@@ -219,3 +247,5 @@ export const DEFAULT_SHAPE_SIZE = {
   width: 100,
   height: 100,
 } as const;
+
+export const DEFAULT_STICKY_TEXT = 'New sticky note';

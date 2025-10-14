@@ -1,5 +1,5 @@
 import * as Y from 'yjs';
-import { StickyNote, Rectangle, Circle, TextShape } from '@gathercomb/shared';
+import { StickyNote, Rectangle, Circle, TextShape, DEFAULT_STICKY_SIZE, DEFAULT_STICKY_TEXT } from '@gathercomb/shared';
 
 // Yjs document structure for a board
 export interface BoardDoc {
@@ -112,14 +112,16 @@ export class BoardDocument {
     }
 
     const stickyMap = new Y.Map();
-    stickyMap.set('text', new Y.Text(data.text || ''));
+    stickyMap.set('text', new Y.Text(data.text || DEFAULT_STICKY_TEXT));
     stickyMap.set('color', data.color || '#ffff00');
     stickyMap.set('x', data.x || 0);
     stickyMap.set('y', data.y || 0);
-    stickyMap.set('width', data.width || 200);
-    stickyMap.set('height', data.height || 150);
+    stickyMap.set('width', data.width || DEFAULT_STICKY_SIZE.width);
+    stickyMap.set('height', data.height || DEFAULT_STICKY_SIZE.height);
     stickyMap.set('rotation', data.rotation || 0);
     stickyMap.set('zIndex', data.zIndex || 0);
+    stickyMap.set('fontSize', data.fontSize || 14);
+    stickyMap.set('textColor', data.textColor || '#333');
     stickyMap.set('createdBy', userId);
     stickyMap.set('createdAt', Date.now());
     stickyMap.set('updatedAt', Date.now());
@@ -194,7 +196,11 @@ export class BoardDocument {
         height: stickyMap.get('height'),
         rotation: stickyMap.get('rotation'),
         zIndex: stickyMap.get('zIndex'),
+        fontSize: stickyMap.get('fontSize') || 14,
+        textColor: stickyMap.get('textColor') || '#333',
         createdBy: stickyMap.get('createdBy'),
+        createdAt: stickyMap.get('createdAt'),
+        updatedAt: stickyMap.get('updatedAt'),
       });
     });
 
@@ -222,6 +228,9 @@ export class BoardDocument {
     shapeMap.set('height', data.height || 100);
     shapeMap.set('rotation', data.rotation || 0);
     shapeMap.set('zIndex', data.zIndex || 0);
+    shapeMap.set('text', data.text || '');
+    shapeMap.set('fontSize', data.fontSize || 14);
+    shapeMap.set('textColor', data.textColor || '#333');
     shapeMap.set('createdBy', userId);
     shapeMap.set('createdAt', Date.now());
     shapeMap.set('updatedAt', Date.now());
@@ -251,6 +260,9 @@ export class BoardDocument {
     shapeMap.set('height', data.height || 100);
     shapeMap.set('rotation', data.rotation || 0);
     shapeMap.set('zIndex', data.zIndex || 0);
+    shapeMap.set('text', data.text || '');
+    shapeMap.set('fontSize', data.fontSize || 14);
+    shapeMap.set('textColor', data.textColor || '#333');
     shapeMap.set('createdBy', userId);
     shapeMap.set('createdAt', Date.now());
     shapeMap.set('updatedAt', Date.now());
@@ -455,5 +467,224 @@ export class BoardDocument {
   // Apply update to document
   applyUpdate(update: Uint8Array): void {
     Y.applyUpdate(this.doc, update);
+  }
+
+  // Z-index management methods
+  moveToFront(id: string): void {
+    const stickies = this.boardMap.get('stickies') as Y.Map<Y.Map<any>>;
+    const shapes = this.boardMap.get('shapes') as Y.Map<Y.Map<any>>;
+
+    if (stickies?.has(id)) {
+      const sticky = stickies.get(id);
+      if (sticky) {
+        let maxZIndex = 0;
+        stickies.forEach((stickyMap) => {
+          const zIndex = stickyMap.get('zIndex') || 0;
+          maxZIndex = Math.max(maxZIndex, zIndex);
+        });
+        shapes?.forEach((shapeMap) => {
+          const zIndex = shapeMap.get('zIndex') || 0;
+          maxZIndex = Math.max(maxZIndex, zIndex);
+        });
+
+        sticky.set('zIndex', maxZIndex + 1);
+        sticky.set('updatedAt', Date.now());
+      }
+    } else if (shapes?.has(id)) {
+      const shape = shapes.get(id);
+      if (shape) {
+        let maxZIndex = 0;
+        stickies?.forEach((stickyMap) => {
+          const zIndex = stickyMap.get('zIndex') || 0;
+          maxZIndex = Math.max(maxZIndex, zIndex);
+        });
+        shapes.forEach((shapeMap) => {
+          const zIndex = shapeMap.get('zIndex') || 0;
+          maxZIndex = Math.max(maxZIndex, zIndex);
+        });
+
+        shape.set('zIndex', maxZIndex + 1);
+        shape.set('updatedAt', Date.now());
+      }
+    }
+  }
+
+  moveToBack(id: string): void {
+    const stickies = this.boardMap.get('stickies') as Y.Map<Y.Map<any>>;
+    const shapes = this.boardMap.get('shapes') as Y.Map<Y.Map<any>>;
+
+    if (stickies?.has(id)) {
+      const sticky = stickies.get(id);
+      if (sticky) {
+        stickies.forEach((stickyMap, stickyId) => {
+          if (stickyId !== id) {
+            const currentZIndex = stickyMap.get('zIndex') || 0;
+            stickyMap.set('zIndex', currentZIndex + 1);
+            stickyMap.set('updatedAt', Date.now());
+          }
+        });
+        shapes?.forEach((shapeMap) => {
+          const currentZIndex = shapeMap.get('zIndex') || 0;
+          shapeMap.set('zIndex', currentZIndex + 1);
+          shapeMap.set('updatedAt', Date.now());
+        });
+
+        sticky.set('zIndex', 0);
+        sticky.set('updatedAt', Date.now());
+      }
+    } else if (shapes?.has(id)) {
+      const shape = shapes.get(id);
+      if (shape) {
+        stickies?.forEach((stickyMap) => {
+          const currentZIndex = stickyMap.get('zIndex') || 0;
+          stickyMap.set('zIndex', currentZIndex + 1);
+          stickyMap.set('updatedAt', Date.now());
+        });
+        shapes.forEach((shapeMap, shapeId) => {
+          if (shapeId !== id) {
+            const currentZIndex = shapeMap.get('zIndex') || 0;
+            shapeMap.set('zIndex', currentZIndex + 1);
+            shapeMap.set('updatedAt', Date.now());
+          }
+        });
+
+        shape.set('zIndex', 0);
+        shape.set('updatedAt', Date.now());
+      }
+    }
+  }
+
+  moveForward(id: string): void {
+    const stickies = this.boardMap.get('stickies') as Y.Map<Y.Map<any>>;
+    const shapes = this.boardMap.get('shapes') as Y.Map<Y.Map<any>>;
+
+    if (stickies?.has(id)) {
+      const sticky = stickies.get(id);
+      if (sticky) {
+        const currentZIndex = sticky.get('zIndex') || 0;
+        const newZIndex = currentZIndex + 1;
+
+        let swapped = false;
+        stickies.forEach((stickyMap, stickyId) => {
+          if (stickyId !== id && (stickyMap.get('zIndex') || 0) === newZIndex) {
+            stickyMap.set('zIndex', currentZIndex);
+            stickyMap.set('updatedAt', Date.now());
+            swapped = true;
+          }
+        });
+        if (!swapped) {
+          shapes?.forEach((shapeMap) => {
+            if ((shapeMap.get('zIndex') || 0) === newZIndex) {
+              shapeMap.set('zIndex', currentZIndex);
+              shapeMap.set('updatedAt', Date.now());
+              swapped = true;
+            }
+          });
+        }
+
+        if (swapped) {
+          sticky.set('zIndex', newZIndex);
+          sticky.set('updatedAt', Date.now());
+        }
+      }
+    } else if (shapes?.has(id)) {
+      const shape = shapes.get(id);
+      if (shape) {
+        const currentZIndex = shape.get('zIndex') || 0;
+        const newZIndex = currentZIndex + 1;
+
+        let swapped = false;
+        stickies?.forEach((stickyMap) => {
+          if ((stickyMap.get('zIndex') || 0) === newZIndex) {
+            stickyMap.set('zIndex', currentZIndex);
+            stickyMap.set('updatedAt', Date.now());
+            swapped = true;
+          }
+        });
+        if (!swapped) {
+          shapes.forEach((shapeMap, shapeId) => {
+            if (shapeId !== id && (shapeMap.get('zIndex') || 0) === newZIndex) {
+              shapeMap.set('zIndex', currentZIndex);
+              shapeMap.set('updatedAt', Date.now());
+              swapped = true;
+            }
+          });
+        }
+
+        if (swapped) {
+          shape.set('zIndex', newZIndex);
+          shape.set('updatedAt', Date.now());
+        }
+      }
+    }
+  }
+
+  moveBackward(id: string): void {
+    const stickies = this.boardMap.get('stickies') as Y.Map<Y.Map<any>>;
+    const shapes = this.boardMap.get('shapes') as Y.Map<Y.Map<any>>;
+
+    if (stickies?.has(id)) {
+      const sticky = stickies.get(id);
+      if (sticky) {
+        const currentZIndex = sticky.get('zIndex') || 0;
+        const newZIndex = Math.max(0, currentZIndex - 1);
+
+        if (newZIndex !== currentZIndex) {
+          let swapped = false;
+          stickies.forEach((stickyMap, stickyId) => {
+            if (stickyId !== id && (stickyMap.get('zIndex') || 0) === newZIndex) {
+              stickyMap.set('zIndex', currentZIndex);
+              stickyMap.set('updatedAt', Date.now());
+              swapped = true;
+            }
+          });
+          if (!swapped) {
+            shapes?.forEach((shapeMap) => {
+              if ((shapeMap.get('zIndex') || 0) === newZIndex) {
+                shapeMap.set('zIndex', currentZIndex);
+                shapeMap.set('updatedAt', Date.now());
+                swapped = true;
+              }
+            });
+          }
+
+          if (swapped) {
+            sticky.set('zIndex', newZIndex);
+            sticky.set('updatedAt', Date.now());
+          }
+        }
+      }
+    } else if (shapes?.has(id)) {
+      const shape = shapes.get(id);
+      if (shape) {
+        const currentZIndex = shape.get('zIndex') || 0;
+        const newZIndex = Math.max(0, currentZIndex - 1);
+
+        if (newZIndex !== currentZIndex) {
+          let swapped = false;
+          stickies?.forEach((stickyMap) => {
+            if ((stickyMap.get('zIndex') || 0) === newZIndex) {
+              stickyMap.set('zIndex', currentZIndex);
+              stickyMap.set('updatedAt', Date.now());
+              swapped = true;
+            }
+          });
+          if (!swapped) {
+            shapes.forEach((shapeMap, shapeId) => {
+              if (shapeId !== id && (shapeMap.get('zIndex') || 0) === newZIndex) {
+                shapeMap.set('zIndex', currentZIndex);
+                shapeMap.set('updatedAt', Date.now());
+                swapped = true;
+              }
+            });
+          }
+
+          if (swapped) {
+            shape.set('zIndex', newZIndex);
+            shape.set('updatedAt', Date.now());
+          }
+        }
+      }
+    }
   }
 }

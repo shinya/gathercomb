@@ -10,6 +10,7 @@ interface CanvasState {
 
   // Selection state
   selectedStickyIds: string[];
+  selectedShapeIds: string[];
 
   // UI state
   isDragging: boolean;
@@ -27,6 +28,7 @@ interface CanvasState {
   setZoom: (zoom: number) => void;
   setPan: (x: number, y: number) => void;
   setSelectedStickyIds: (ids: string[]) => void;
+  setSelectedShapeIds: (ids: string[]) => void;
   setIsDragging: (isDragging: boolean) => void;
   setIsResizing: (isResizing: boolean) => void;
   setIsPanning: (isPanning: boolean) => void;
@@ -47,6 +49,7 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
   panX: 0,
   panY: 0,
   selectedStickyIds: [],
+  selectedShapeIds: [],
   isDragging: false,
   isResizing: false,
   isPanning: false,
@@ -58,6 +61,7 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
   setZoom: (zoom) => set({ zoom }),
   setPan: (panX, panY) => set({ panX, panY }),
   setSelectedStickyIds: (selectedStickyIds) => set({ selectedStickyIds }),
+  setSelectedShapeIds: (selectedShapeIds) => set({ selectedShapeIds }),
   setIsDragging: (isDragging) => set({ isDragging }),
   setIsResizing: (isResizing) => set({ isResizing }),
   setIsPanning: (isPanning) => set({ isPanning }),
@@ -152,6 +156,12 @@ interface BoardState {
   hideContextMenu: () => void;
   changeStickyColor: (stickyId: string, color: string) => void;
   changeShapeColor: (shapeId: string, color: string) => void;
+
+  // Z-index management actions
+  moveToFront: (id: string) => void;
+  moveToBack: (id: string) => void;
+  moveForward: (id: string) => void;
+  moveBackward: (id: string) => void;
 }
 
 export const useBoardStore = create<BoardState>((set, get) => ({
@@ -343,6 +353,35 @@ export const useBoardStore = create<BoardState>((set, get) => ({
     const { boardProvider } = get();
     if (boardProvider) {
       boardProvider.updateShape(shapeId, { fill: color });
+    }
+  },
+
+  // Z-index management actions
+  moveToFront: (id) => {
+    const { boardProvider } = get();
+    if (boardProvider) {
+      boardProvider.moveToFront(id);
+    }
+  },
+
+  moveToBack: (id) => {
+    const { boardProvider } = get();
+    if (boardProvider) {
+      boardProvider.moveToBack(id);
+    }
+  },
+
+  moveForward: (id) => {
+    const { boardProvider } = get();
+    if (boardProvider) {
+      boardProvider.moveForward(id);
+    }
+  },
+
+  moveBackward: (id) => {
+    const { boardProvider } = get();
+    if (boardProvider) {
+      boardProvider.moveBackward(id);
     }
   },
 }));

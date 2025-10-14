@@ -13,20 +13,17 @@ COPY pnpm-lock.yaml ./
 COPY apps/web/package*.json ./apps/web/
 COPY packages/shared/package*.json ./packages/shared/
 
-# Install dependencies using pnpm
-RUN pnpm install --frozen-lockfile
-
 # Copy source code
 COPY . .
+
+# Install dependencies using pnpm
+RUN pnpm install --frozen-lockfile
 
 # Build shared package first (dependency for web)
 RUN pnpm --filter=@gathercomb/shared build
 
-# Reinstall to ensure workspace links are correct
-RUN pnpm install
-
 # Expose port
 EXPOSE 3000
 
-# Start frontend in development mode
-CMD ["sh", "-c", "pnpm --filter=@gathercomb/web dev --host 0.0.0.0"]
+# Start frontend in development mode with dependency check
+CMD ["sh", "-c", "if [ ! -d \"/app/apps/web/node_modules\" ]; then echo \"Installing dependencies...\"; cd /app && pnpm install --frozen-lockfile; fi && exec pnpm --filter=@gathercomb/web dev --host 0.0.0.0"]

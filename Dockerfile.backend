@@ -21,20 +21,17 @@ COPY pnpm-lock.yaml ./
 COPY apps/server/package*.json ./apps/server/
 COPY packages/shared/package*.json ./packages/shared/
 
-# Install dependencies using pnpm
-RUN pnpm install --frozen-lockfile
-
 # Copy source code
 COPY . .
+
+# Install dependencies using pnpm
+RUN pnpm install --frozen-lockfile
 
 # Build shared package first (dependency for server)
 RUN pnpm --filter=@gathercomb/shared build
 
-# Reinstall to ensure workspace links are correct
-RUN pnpm install
-
 # Expose port
 EXPOSE 8080
 
-# Start server in development mode
-CMD ["pnpm", "--filter=@gathercomb/server", "dev"]
+# Start server in development mode with dependency check
+CMD ["sh", "-c", "if [ ! -d \"/app/apps/server/node_modules\" ]; then echo \"Installing dependencies...\"; cd /app && pnpm install --frozen-lockfile; fi && exec pnpm --filter=@gathercomb/server dev"]

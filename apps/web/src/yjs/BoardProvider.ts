@@ -176,6 +176,23 @@ export class BoardProvider {
     return this._isConnected;
   }
 
+  // Z-index management methods
+  moveToFront = (id: string): void => {
+    this.boardDoc.moveToFront(id);
+  };
+
+  moveToBack = (id: string): void => {
+    this.boardDoc.moveToBack(id);
+  };
+
+  moveForward = (id: string): void => {
+    this.boardDoc.moveForward(id);
+  };
+
+  moveBackward = (id: string): void => {
+    this.boardDoc.moveBackward(id);
+  };
+
   // Disconnect and cleanup
   destroy(): void {
     if (this.wsProvider) {
