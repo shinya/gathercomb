@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { STICKY_COLORS, FONT_SIZES, STROKE_COLORS } from '@gathercomb/shared';
+import { STICKY_COLORS, FONT_SIZES, STROKE_COLORS, TEXT_COLORS } from '@gathercomb/shared';
 
 // SVG Icons
 const BackgroundColorIcon: React.FC<{ size?: number; color?: string }> = ({ size = 16, color = 'currentColor' }) => (
@@ -147,6 +147,14 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
     setShowStrokeColorPicker(false);
   };
 
+  // Close all sub-menus when opening a new one
+  const closeAllSubMenus = () => {
+    setShowBackgroundColorPicker(false);
+    setShowTextColorPicker(false);
+    setShowFontSizePicker(false);
+    setShowStrokeColorPicker(false);
+  };
+
   const showStrokeColorButton = objectType === 'rectangle' || objectType === 'circle';
   const isExtendedMenu = objectType && onBackgroundColorChange;
 
@@ -193,7 +201,10 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
             {/* Background Color */}
             <div style={{ position: 'relative' }}>
               <button
-                onClick={() => setShowBackgroundColorPicker(!showBackgroundColorPicker)}
+                onClick={() => {
+                  closeAllSubMenus();
+                  setShowBackgroundColorPicker(!showBackgroundColorPicker);
+                }}
                 style={{
                   width: '100%',
                   padding: '8px 16px',
@@ -258,7 +269,10 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
             {/* Text Color */}
             <div style={{ position: 'relative' }}>
               <button
-                onClick={() => setShowTextColorPicker(!showTextColorPicker)}
+                onClick={() => {
+                  closeAllSubMenus();
+                  setShowTextColorPicker(!showTextColorPicker);
+                }}
                 style={{
                   width: '100%',
                   padding: '8px 16px',
@@ -302,7 +316,7 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
                     zIndex: 1000,
                   }}
                 >
-                  {STICKY_COLORS.map((color) => (
+                  {TEXT_COLORS.map((color) => (
                     <button
                       key={color}
                       onClick={() => handleTextColorClick(color)}
@@ -323,7 +337,10 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
             {/* Font Size */}
             <div style={{ position: 'relative' }}>
               <button
-                onClick={() => setShowFontSizePicker(!showFontSizePicker)}
+                onClick={() => {
+                  closeAllSubMenus();
+                  setShowFontSizePicker(!showFontSizePicker);
+                }}
                 style={{
                   width: '100%',
                   padding: '8px 16px',
@@ -531,7 +548,10 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
 
                 <div style={{ position: 'relative' }}>
                   <button
-                    onClick={() => setShowStrokeColorPicker(!showStrokeColorPicker)}
+                    onClick={() => {
+                      closeAllSubMenus();
+                      setShowStrokeColorPicker(!showStrokeColorPicker);
+                    }}
                     style={{
                       width: '100%',
                       padding: '8px 16px',

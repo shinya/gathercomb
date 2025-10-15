@@ -192,6 +192,17 @@ export const STROKE_COLORS = [
   '#0000ff', // Blue
 ] as const;
 
+export const TEXT_COLORS = [
+  '#ffffff', // White
+  '#cccccc', // Very Light Gray
+  '#999999', // Light Gray
+  '#666666', // Gray
+  '#000000', // Black
+  '#ff0000', // Red
+  '#ffff00', // Yellow
+  '#0000ff', // Blue
+] as const;
+
 // Shape types
 export type ShapeType = 'sticky' | 'rectangle' | 'circle' | 'text';
 
