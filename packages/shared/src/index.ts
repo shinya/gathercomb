@@ -203,6 +203,28 @@ export const TEXT_COLORS = [
   '#0000ff', // Blue
 ] as const;
 
+// Unified color palette for all color selections
+export const UNIFIED_COLORS = [
+  // Background colors (8 colors)
+  '#ffff00', // Yellow
+  '#ff6b6b', // Red
+  '#4ecdc4', // Teal
+  '#45b7d1', // Blue
+  '#96ceb4', // Green
+  '#feca57', // Orange
+  '#ff9ff3', // Pink
+  '#54a0ff', // Light Blue
+  // Additional colors (8 colors)
+  '#000000', // Black
+  '#333333', // Dark Gray
+  '#666666', // Gray
+  '#999999', // Light Gray
+  '#cccccc', // Very Light Gray
+  '#ffffff', // White
+  '#00ff00', // Green
+  '#0000ff', // Blue
+] as const;
+
 // Shape types
 export type ShapeType = 'sticky' | 'rectangle' | 'circle' | 'text';
 

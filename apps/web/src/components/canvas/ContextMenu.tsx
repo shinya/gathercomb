@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { STICKY_COLORS, FONT_SIZES, STROKE_COLORS, TEXT_COLORS } from '@gathercomb/shared';
+import { STICKY_COLORS, FONT_SIZES, STROKE_COLORS, TEXT_COLORS, UNIFIED_COLORS } from '@gathercomb/shared';
 
 // SVG Icons
 const BackgroundColorIcon: React.FC<{ size?: number; color?: string }> = ({ size = 16, color = 'currentColor' }) => (
@@ -248,7 +248,7 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
                     zIndex: 1000,
                   }}
                 >
-                  {STICKY_COLORS.map((color) => (
+                  {UNIFIED_COLORS.map((color) => (
                     <button
                       key={color}
                       onClick={() => handleBackgroundColorClick(color)}
@@ -316,7 +316,7 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
                     zIndex: 1000,
                   }}
                 >
-                  {TEXT_COLORS.map((color) => (
+                  {UNIFIED_COLORS.map((color) => (
                     <button
                       key={color}
                       onClick={() => handleTextColorClick(color)}
@@ -336,31 +336,31 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
 
             {/* Font Size */}
             <div style={{ position: 'relative' }}>
-              <button
+        <button
                 onClick={() => {
                   closeAllSubMenus();
                   setShowFontSizePicker(!showFontSizePicker);
                 }}
-                style={{
-                  width: '100%',
-                  padding: '8px 16px',
-                  border: 'none',
-                  backgroundColor: 'transparent',
-                  textAlign: 'left',
-                  cursor: 'pointer',
-                  fontSize: '14px',
-                  display: 'flex',
-                  alignItems: 'center',
+          style={{
+            width: '100%',
+            padding: '8px 16px',
+            border: 'none',
+            backgroundColor: 'transparent',
+            textAlign: 'left',
+            cursor: 'pointer',
+            fontSize: '14px',
+            display: 'flex',
+            alignItems: 'center',
                   gap: '12px',
                   color: '#333',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = '#f8f9fa';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = 'transparent';
-                }}
-              >
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.backgroundColor = '#f8f9fa';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.backgroundColor = 'transparent';
+          }}
+        >
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <FontSizeIcon size={16} />
                   <span>Font Size ({currentFontSize || 14}px)</span>
@@ -409,19 +409,19 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
                         }}
                       >
                         {size}
-                      </button>
+        </button>
                     ))}
                   </div>
                 </div>
               )}
             </div>
 
-            {/* Divider */}
-            <div style={{
-              height: '1px',
-              backgroundColor: '#e0e0e0',
-              margin: '4px 0',
-            }} />
+        {/* Divider */}
+        <div style={{
+          height: '1px',
+          backgroundColor: '#e0e0e0',
+          margin: '4px 0',
+        }} />
 
             {/* Z-Index Controls */}
             <button
@@ -505,7 +505,7 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <MoveToFrontIcon size={16} />
                 <span>Move to Front</span>
-              </div>
+        </div>
             </button>
 
             <button
@@ -595,7 +595,7 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
                         zIndex: 1000,
                       }}
                     >
-                      {STROKE_COLORS.map((color) => (
+                      {UNIFIED_COLORS.map((color) => (
                         <button
                           key={color}
                           onClick={() => handleStrokeColorClick(color)}
@@ -606,10 +606,10 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
                             border: currentStrokeColor === color ? '2px solid #007bff' : '1px solid #ddd',
                             borderRadius: '4px',
                             cursor: 'pointer',
-                          }}
-                        />
-                      ))}
-                    </div>
+              }}
+            />
+          ))}
+        </div>
                   )}
                 </div>
               </>

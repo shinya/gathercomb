@@ -923,51 +923,92 @@ export const Canvas: React.FC<CanvasProps> = ({ width, height }) => {
     showContextMenu(screenX, screenY, stickyId || null, shapeId || null);
   };
 
-  // Render shapes
-  const renderShapes = () => {
-    return Array.from(shapes.values()).map((shape) => {
-      if (shape.type === 'rectangle') {
+  // Render all objects (sticky notes and shapes) sorted by z-index
+  const renderAllObjects = () => {
+    const allObjects: Array<{ type: 'sticky' | 'shape'; data: any; zIndex: number }> = [];
+
+    // Add sticky notes
+    Array.from(stickyNotes.values()).forEach(note => {
+      allObjects.push({
+        type: 'sticky',
+        data: note,
+        zIndex: note.zIndex || 0
+      });
+    });
+
+    // Add shapes
+    Array.from(shapes.values()).forEach(shape => {
+      allObjects.push({
+        type: 'shape',
+        data: shape,
+        zIndex: shape.zIndex || 0
+      });
+    });
+
+    // Sort by z-index
+    allObjects.sort((a, b) => a.zIndex - b.zIndex);
+
+    return allObjects.map((obj) => {
+      if (obj.type === 'sticky') {
+        const note = obj.data;
         return (
-          <RectangleComponent
-            key={shape.id}
-            shape={shape as Rectangle}
-            isSelected={selectedShapeIds.includes(shape.id)}
-            isEditing={editingShape?.id === shape.id}
-            onClick={(e) => handleShapeClick(shape.id, e)}
-            onDoubleClick={(e) => handleShapeDoubleClick(shape.id, e)}
-            onDragEnd={(e) => handleShapeDrag(shape.id, e)}
-            onContextMenu={(e) => handleShapeRightClick(shape.id, e)}
-            onTransformEnd={(e) => handleShapeTransform(shape.id, e)}
+          <StickyNoteComponent
+            key={note.id}
+            note={note}
+            isSelected={selectedStickyIds.includes(note.id)}
+            isEditing={editingSticky?.id === note.id}
+            onClick={(e) => handleStickyClick(note.id, e)}
+            onDoubleClick={(e) => handleStickyDoubleClick(note.id, e)}
+            onDragEnd={(e) => handleStickyDrag(note.id, e)}
+            onContextMenu={(e) => handleStickyRightClick(note.id, e)}
+            onTransformEnd={(e) => handleStickyTransform(note.id, e)}
           />
         );
-      } else if (shape.type === 'circle') {
-        return (
-          <CircleComponent
-            key={shape.id}
-            shape={shape as Circle}
-            isSelected={selectedShapeIds.includes(shape.id)}
-            isEditing={editingShape?.id === shape.id}
-            onClick={(e) => handleShapeClick(shape.id, e)}
-            onDoubleClick={(e) => handleShapeDoubleClick(shape.id, e)}
-            onDragEnd={(e) => handleShapeDrag(shape.id, e)}
-            onContextMenu={(e) => handleShapeRightClick(shape.id, e)}
-            onTransformEnd={(e) => handleShapeTransform(shape.id, e)}
-          />
-        );
-      } else if (shape.type === 'text') {
-        return (
-          <TextShapeComponent
-            key={shape.id}
-            shape={shape as TextShape}
-            isSelected={selectedShapeIds.includes(shape.id)}
-            isEditing={editingTextShape?.id === shape.id}
-            onClick={(e) => handleShapeClick(shape.id, e)}
-            onDoubleClick={(e) => handleTextShapeDoubleClick(shape.id, e)}
-            onDragEnd={(e) => handleShapeDrag(shape.id, e)}
-            onContextMenu={(e) => handleShapeRightClick(shape.id, e)}
-            onTransformEnd={(e) => handleShapeTransform(shape.id, e)}
-          />
-        );
+      } else {
+        const shape = obj.data;
+        if (shape.type === 'rectangle') {
+          return (
+            <RectangleComponent
+              key={shape.id}
+              shape={shape as Rectangle}
+              isSelected={selectedShapeIds.includes(shape.id)}
+              isEditing={editingShape?.id === shape.id}
+              onClick={(e) => handleShapeClick(shape.id, e)}
+              onDoubleClick={(e) => handleShapeDoubleClick(shape.id, e)}
+              onDragEnd={(e) => handleShapeDrag(shape.id, e)}
+              onContextMenu={(e) => handleShapeRightClick(shape.id, e)}
+              onTransformEnd={(e) => handleShapeTransform(shape.id, e)}
+            />
+          );
+        } else if (shape.type === 'circle') {
+          return (
+            <CircleComponent
+              key={shape.id}
+              shape={shape as Circle}
+              isSelected={selectedShapeIds.includes(shape.id)}
+              isEditing={editingShape?.id === shape.id}
+              onClick={(e) => handleShapeClick(shape.id, e)}
+              onDoubleClick={(e) => handleShapeDoubleClick(shape.id, e)}
+              onDragEnd={(e) => handleShapeDrag(shape.id, e)}
+              onContextMenu={(e) => handleShapeRightClick(shape.id, e)}
+              onTransformEnd={(e) => handleShapeTransform(shape.id, e)}
+            />
+          );
+        } else if (shape.type === 'text') {
+          return (
+            <TextShapeComponent
+              key={shape.id}
+              shape={shape as TextShape}
+              isSelected={selectedShapeIds.includes(shape.id)}
+              isEditing={editingTextShape?.id === shape.id}
+              onClick={(e) => handleShapeClick(shape.id, e)}
+              onDoubleClick={(e) => handleTextShapeDoubleClick(shape.id, e)}
+              onDragEnd={(e) => handleShapeDrag(shape.id, e)}
+              onContextMenu={(e) => handleShapeRightClick(shape.id, e)}
+              onTransformEnd={(e) => handleShapeTransform(shape.id, e)}
+            />
+          );
+        }
       }
       return null;
     });
@@ -1001,22 +1042,6 @@ export const Canvas: React.FC<CanvasProps> = ({ width, height }) => {
     });
   };
 
-  // Render sticky notes
-  const renderStickyNotes = () => {
-    return Array.from(stickyNotes.values()).map((note) => (
-      <StickyNoteComponent
-        key={note.id}
-        note={note}
-        isSelected={selectedStickyIds.includes(note.id)}
-        isEditing={editingSticky?.id === note.id}
-        onClick={(e) => handleStickyClick(note.id, e)}
-        onDoubleClick={(e) => handleStickyDoubleClick(note.id, e)}
-        onDragEnd={(e) => handleStickyDrag(note.id, e)}
-        onContextMenu={(e) => handleStickyRightClick(note.id, e)}
-        onTransformEnd={(e) => handleStickyTransform(note.id, e)}
-      />
-    ));
-  };
 
   // Handle sticky note transform (resize)
   const handleStickyTransform = (id: string, e: Konva.KonvaEventObject<Event>) => {
@@ -1075,8 +1100,7 @@ export const Canvas: React.FC<CanvasProps> = ({ width, height }) => {
           {renderGrid()}
         </Layer>
         <Layer>
-          {renderStickyNotes()}
-          {renderShapes()}
+          {renderAllObjects()}
           <Transformer
             ref={transformerRef}
             keepRatio={getSelectedObjectType() === 'sticky'}
