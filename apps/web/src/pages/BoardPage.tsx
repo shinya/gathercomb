@@ -1,13 +1,15 @@
 import React, { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../components/AuthProvider';
 import { useBoardStore } from '../stores/boardStore';
 import { BoardProvider } from '../yjs/BoardProvider';
 import { Canvas } from '../components/canvas/Canvas';
+import { boardService } from '../services/board';
 
 export const BoardPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [canvasSize, setCanvasSize] = useState({ width: 0, height: 0 });
 
   const {
@@ -35,6 +37,10 @@ export const BoardPage: React.FC = () => {
       setError(null);
 
       try {
+        // Fetch board information from API to get the actual title
+        const board = await boardService.getBoard(id!);
+        setBoardTitle(board.title);
+
         // Create board provider
         const provider = new BoardProvider(id, user.id);
         await provider.initialize();
@@ -45,7 +51,12 @@ export const BoardPage: React.FC = () => {
         // Set initial data
         setStickyNotes(provider.getStickyNotes());
         setShapes(provider.getShapes());
-        setBoardTitle(provider.getBoardMeta().title);
+
+        // Update board title from Yjs if available, otherwise keep API title
+        const yjsTitle = provider.getBoardMeta().title;
+        if (yjsTitle && yjsTitle !== 'Untitled Board' && yjsTitle !== `Board ${id}`) {
+          setBoardTitle(yjsTitle);
+        }
 
         // Listen for changes
         provider.getDocument().on('update', (_update: Uint8Array, _origin: any) => {
@@ -154,11 +165,24 @@ export const BoardPage: React.FC = () => {
         justifyContent: 'space-between',
         alignItems: 'center'
       }}>
-        <div>
-          <h2>{boardTitle || `Board ${id}`}</h2>
-          <div style={{ fontSize: '12px', color: '#666' }}>
-            {isConnected ? '🟢 Connected' : '🔴 Disconnected'} •
-            {stickyNotes.size} sticky notes • {shapes.size} shapes
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+          <button
+            onClick={() => navigate('/')}
+            className="btn btn-secondary"
+            style={{
+              padding: '8px 16px',
+              fontSize: '14px',
+              cursor: 'pointer'
+            }}
+          >
+            Home
+          </button>
+          <div>
+            <h2 style={{ margin: 0 }}>{boardTitle || 'Untitled Board'}</h2>
+            <div style={{ fontSize: '12px', color: '#666' }}>
+              {isConnected ? '🟢 Connected' : '🔴 Disconnected'} •
+              {stickyNotes.size} sticky notes • {shapes.size} shapes
+            </div>
           </div>
         </div>
         <div>
