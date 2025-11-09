@@ -259,7 +259,17 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
                         border: currentBackgroundColor === color ? '2px solid #007bff' : '1px solid #ddd',
                         borderRadius: '4px',
                         cursor: 'pointer',
+                        position: 'relative',
+                        backgroundImage: color === 'transparent'
+                          ? `linear-gradient(45deg, #ccc 25%, transparent 25%),
+                             linear-gradient(-45deg, #ccc 25%, transparent 25%),
+                             linear-gradient(45deg, transparent 75%, #ccc 75%),
+                             linear-gradient(-45deg, transparent 75%, #ccc 75%)`
+                          : undefined,
+                        backgroundSize: color === 'transparent' ? '8px 8px' : undefined,
+                        backgroundPosition: color === 'transparent' ? '0 0, 0 4px, 4px -4px, -4px 0px' : undefined,
                       }}
+                      title={color === 'transparent' ? 'Transparent' : color}
                     />
                   ))}
                 </div>
@@ -327,7 +337,17 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
                         border: currentTextColor === color ? '2px solid #007bff' : '1px solid #ddd',
                         borderRadius: '4px',
                         cursor: 'pointer',
+                        position: 'relative',
+                        backgroundImage: color === 'transparent'
+                          ? `linear-gradient(45deg, #ccc 25%, transparent 25%),
+                             linear-gradient(-45deg, #ccc 25%, transparent 25%),
+                             linear-gradient(45deg, transparent 75%, #ccc 75%),
+                             linear-gradient(-45deg, transparent 75%, #ccc 75%)`
+                          : undefined,
+                        backgroundSize: color === 'transparent' ? '8px 8px' : undefined,
+                        backgroundPosition: color === 'transparent' ? '0 0, 0 4px, 4px -4px, -4px 0px' : undefined,
                       }}
+                      title={color === 'transparent' ? 'Transparent' : color}
                     />
                   ))}
                 </div>
@@ -606,9 +626,19 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
                             border: currentStrokeColor === color ? '2px solid #007bff' : '1px solid #ddd',
                             borderRadius: '4px',
                             cursor: 'pointer',
-              }}
-            />
-          ))}
+                            position: 'relative',
+                            backgroundImage: color === 'transparent'
+                              ? `linear-gradient(45deg, #ccc 25%, transparent 25%),
+                                 linear-gradient(-45deg, #ccc 25%, transparent 25%),
+                                 linear-gradient(45deg, transparent 75%, #ccc 75%),
+                                 linear-gradient(-45deg, transparent 75%, #ccc 75%)`
+                              : undefined,
+                            backgroundSize: color === 'transparent' ? '8px 8px' : undefined,
+                            backgroundPosition: color === 'transparent' ? '0 0, 0 4px, 4px -4px, -4px 0px' : undefined,
+                          }}
+                          title={color === 'transparent' ? 'Transparent' : color}
+                        />
+                      ))}
         </div>
                   )}
                 </div>

@@ -223,6 +223,8 @@ export const UNIFIED_COLORS = [
   '#ffffff', // White
   '#00ff00', // Green
   '#0000ff', // Blue
+  // Transparent color
+  'transparent', // Transparent
 ] as const;
 
 // Shape types
