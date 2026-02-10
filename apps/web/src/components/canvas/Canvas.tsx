@@ -1,13 +1,15 @@
 import React, { useRef, useState, useEffect } from 'react';
-import { Stage, Layer, Group, Rect, Text, Transformer, Ellipse, TextPath } from 'react-konva';
+import { Stage, Layer, Rect, Transformer } from 'react-konva';
 import Konva from 'konva';
 import { useCanvasStore } from '../../stores/boardStore';
 import { useBoardStore } from '../../stores/boardStore';
 import { StickyNote, Rectangle, Circle, TextShape, DEFAULT_STICKY_SIZE, DEFAULT_SHAPE_SIZE, DEFAULT_STICKY_TEXT } from '@gathercomb/shared';
 import { Toolbar } from './Toolbar';
 import { ContextMenu } from './ContextMenu';
-import { ObjectEditMenu } from './ObjectEditMenu';
 import { ShapeTextarea } from './ShapeTextarea';
+import { PresenceCursors } from './PresenceCursors';
+import { StickyNoteComponent, RectangleComponent, CircleComponent, TextShapeComponent } from './shapes';
+import { KeyboardShortcutsPanel } from './KeyboardShortcutsPanel';
 
 // StickyNote Textarea Component
 interface StickyNoteTextareaProps {
@@ -205,6 +207,11 @@ const TextShapeTextarea: React.FC<TextShapeTextareaProps> = ({
   );
 };
 
+// Snap value to nearest grid point
+function snapToGridValue(value: number, gridSize: number): number {
+  return Math.round(value / gridSize) * gridSize;
+}
+
 interface CanvasProps {
   width: number;
   height: number;
@@ -233,6 +240,8 @@ export const Canvas: React.FC<CanvasProps> = ({ width, height }) => {
     height: number;
   } | null>(null);
 
+  const [showShortcuts, setShowShortcuts] = useState(false);
+
   const [editingShape, setEditingShape] = useState<{
     id: string;
     text: string;
@@ -252,10 +261,12 @@ export const Canvas: React.FC<CanvasProps> = ({ width, height }) => {
     selectedShapeIds,
     showGrid,
     gridSize,
+    snapToGrid,
     setZoom,
     setPan,
     setSelectedStickyIds,
     setSelectedShapeIds,
+    setSnapToGrid,
     zoomIn,
     zoomOut,
     resetView,
@@ -267,6 +278,7 @@ export const Canvas: React.FC<CanvasProps> = ({ width, height }) => {
     selectedTool,
     selectedColor,
     contextMenu,
+    boardProvider,
     createStickyNote,
     createRectangle,
     createCircle,
@@ -286,6 +298,20 @@ export const Canvas: React.FC<CanvasProps> = ({ width, height }) => {
     moveForward,
     moveBackward,
   } = useBoardStore();
+
+  // Handle mouse move to broadcast cursor position
+  const handleMouseMove = (e: Konva.KonvaEventObject<MouseEvent>) => {
+    if (!boardProvider) return;
+    const stage = e.target.getStage();
+    if (!stage) return;
+    const pointer = stage.getPointerPosition();
+    if (!pointer) return;
+
+    // Convert screen coordinates to canvas/world space
+    const worldX = (pointer.x - panX) / zoom;
+    const worldY = (pointer.y - panY) / zoom;
+    boardProvider.setLocalCursor(worldX, worldY);
+  };
 
   // Handle wheel zoom
   const handleWheel = (e: Konva.KonvaEventObject<WheelEvent>) => {
@@ -531,184 +557,18 @@ export const Canvas: React.FC<CanvasProps> = ({ width, height }) => {
     setEditingShape(null);
   };
 
-  // Calculate ObjectEditMenu position
-  const getObjectEditMenuPosition = () => {
-    const allSelectedIds = [...selectedStickyIds, ...selectedShapeIds];
-    if (allSelectedIds.length === 0) return null;
-
-    // Use the first selected object for positioning
-    const firstId = allSelectedIds[0];
-
-    let baseX = 0;
-    let baseY = 0;
-    let objectWidth = 0;
-    let objectHeight = 0;
-
-    // Check if it's a sticky note
-    const sticky = stickyNotes.get(firstId);
-    if (sticky) {
-      baseX = sticky.x;
-      baseY = sticky.y;
-      objectWidth = sticky.width;
-      objectHeight = sticky.height;
-
-      // Calculate position to the right of the object
-      let menuX = (baseX + objectWidth) * zoom + panX + 10;
-      let menuY = baseY * zoom + panY;
-
-      // Adjust if menu would go off screen
-      const menuWidth = 200; // Approximate menu width
-      const menuHeight = 300; // Approximate menu height
-
-      if (menuX + menuWidth > width) {
-        // Position to the left of the object instead
-        menuX = baseX * zoom + panX - menuWidth - 10;
-      }
-
-      if (menuY + menuHeight > height) {
-        // Adjust vertical position
-        menuY = height - menuHeight - 10;
-      }
-
-      if (menuY < 10) {
-        menuY = 10;
-      }
-
-      return {
-        x: menuX,
-        y: menuY,
-        objectType: 'sticky' as const,
-        currentBackgroundColor: sticky.color,
-        currentTextColor: sticky.textColor || '#333',
-        currentFontSize: sticky.fontSize || 14,
-      };
-    }
-
-    // Check if it's a shape
-    const shape = shapes.get(firstId);
-    if (shape) {
-      baseX = shape.x;
-      baseY = shape.y;
-      objectWidth = shape.width;
-      objectHeight = shape.height;
-
-      // Calculate position to the right of the object
-      let menuX = (baseX + objectWidth) * zoom + panX + 10;
-      let menuY = baseY * zoom + panY;
-
-      // Adjust if menu would go off screen
-      const menuWidth = 200; // Approximate menu width
-      const menuHeight = 300; // Approximate menu height
-
-      if (menuX + menuWidth > width) {
-        // Position to the left of the object instead
-        menuX = baseX * zoom + panX - menuWidth - 10;
-      }
-
-      if (menuY + menuHeight > height) {
-        // Adjust vertical position
-        menuY = height - menuHeight - 10;
-      }
-
-      if (menuY < 10) {
-        menuY = 10;
-      }
-
-      return {
-        x: menuX,
-        y: menuY,
-        objectType: shape.type as 'rectangle' | 'circle' | 'text',
-        currentBackgroundColor: shape.fill,
-        currentTextColor: shape.textColor || '#333',
-        currentFontSize: shape.fontSize || 14,
-        currentStrokeColor: shape.stroke,
-      };
-    }
-
-    return null;
-  };
-
-  // ObjectEditMenu event handlers
-  const handleBackgroundColorChange = (color: string) => {
-    const allSelectedIds = [...selectedStickyIds, ...selectedShapeIds];
-    allSelectedIds.forEach(id => {
-      const sticky = stickyNotes.get(id);
-      if (sticky) {
-        updateStickyNoteData(id, { color });
-      } else {
-        const shape = shapes.get(id);
-        if (shape) {
-          updateShapeData(id, { fill: color });
-        }
-      }
-    });
-  };
-
-  const handleTextColorChange = (color: string) => {
-    const allSelectedIds = [...selectedStickyIds, ...selectedShapeIds];
-    allSelectedIds.forEach(id => {
-      const sticky = stickyNotes.get(id);
-      if (sticky) {
-        updateStickyNoteData(id, { textColor: color });
-      } else {
-        const shape = shapes.get(id);
-        if (shape) {
-          updateShapeData(id, { textColor: color });
-        }
-      }
-    });
-  };
-
-  const handleFontSizeChange = (size: number) => {
-    const allSelectedIds = [...selectedStickyIds, ...selectedShapeIds];
-    allSelectedIds.forEach(id => {
-      const sticky = stickyNotes.get(id);
-      if (sticky) {
-        updateStickyNoteData(id, { fontSize: size });
-      } else {
-        const shape = shapes.get(id);
-        if (shape) {
-          updateShapeData(id, { fontSize: size });
-        }
-      }
-    });
-  };
-
-  const handleStrokeColorChange = (color: string) => {
-    const allSelectedIds = [...selectedStickyIds, ...selectedShapeIds];
-    allSelectedIds.forEach(id => {
-      const shape = shapes.get(id);
-      if (shape && (shape.type === 'rectangle' || shape.type === 'circle')) {
-        updateShapeData(id, { stroke: color });
-      }
-    });
-  };
-
-  const handleZIndexChange = (operation: 'front' | 'back' | 'forward' | 'backward') => {
-    const allSelectedIds = [...selectedStickyIds, ...selectedShapeIds];
-    allSelectedIds.forEach(id => {
-      switch (operation) {
-        case 'front':
-          moveToFront(id);
-          break;
-        case 'back':
-          moveToBack(id);
-          break;
-        case 'forward':
-          moveForward(id);
-          break;
-        case 'backward':
-          moveBackward(id);
-          break;
-      }
-    });
-  };
-
   // Handle sticky note drag
   const handleStickyDrag = (id: string, e: Konva.KonvaEventObject<DragEvent>) => {
     const node = e.target;
-    const newX = node.x();
-    const newY = node.y();
+    let newX = node.x();
+    let newY = node.y();
+
+    if (snapToGrid) {
+      newX = snapToGridValue(newX, gridSize);
+      newY = snapToGridValue(newY, gridSize);
+      node.x(newX);
+      node.y(newY);
+    }
 
     updateStickyNoteData(id, { x: newX, y: newY });
   };
@@ -731,14 +591,69 @@ export const Canvas: React.FC<CanvasProps> = ({ width, height }) => {
     setPan(newX, newY);
   };
 
+  // Handle duplicate
+  const handleDuplicate = () => {
+    const offset = 20;
+
+    selectedStickyIds.forEach(id => {
+      const sticky = stickyNotes.get(id);
+      if (sticky) {
+        const newId = `sticky-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`;
+        createStickyNote(newId, {
+          ...sticky,
+          x: sticky.x + offset,
+          y: sticky.y + offset,
+        });
+      }
+    });
+
+    selectedShapeIds.forEach(id => {
+      const shape = shapes.get(id);
+      if (shape) {
+        const newId = `${shape.type}-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`;
+        if (shape.type === 'rectangle') {
+          createRectangle(newId, { ...shape, x: shape.x + offset, y: shape.y + offset });
+        } else if (shape.type === 'circle') {
+          createCircle(newId, { ...shape, x: shape.x + offset, y: shape.y + offset });
+        } else if (shape.type === 'text') {
+          createTextShape(newId, { ...shape, x: shape.x + offset, y: shape.y + offset });
+        }
+      }
+    });
+  };
+
   // Handle keyboard events
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Don't handle delete/backspace if we're currently editing text
-      if (editingSticky || editingTextShape) {
+      // Don't handle shortcuts if we're currently editing text
+      if (editingSticky || editingTextShape || editingShape) {
         return;
       }
 
+      const isCtrlOrCmd = e.ctrlKey || e.metaKey;
+
+      // Undo: Ctrl/Cmd + Z
+      if (isCtrlOrCmd && e.key === 'z' && !e.shiftKey) {
+        e.preventDefault();
+        boardProvider?.undo();
+        return;
+      }
+
+      // Redo: Ctrl/Cmd + Shift + Z or Ctrl/Cmd + Y
+      if ((isCtrlOrCmd && e.key === 'z' && e.shiftKey) || (isCtrlOrCmd && e.key === 'y')) {
+        e.preventDefault();
+        boardProvider?.redo();
+        return;
+      }
+
+      // Duplicate: Ctrl/Cmd + D
+      if (isCtrlOrCmd && e.key === 'd') {
+        e.preventDefault();
+        handleDuplicate();
+        return;
+      }
+
+      // Delete/Backspace
       if (e.key === 'Delete' || e.key === 'Backspace') {
         if (selectedStickyIds.length > 0) {
           selectedStickyIds.forEach(id => {
@@ -753,11 +668,17 @@ export const Canvas: React.FC<CanvasProps> = ({ width, height }) => {
           setSelectedShapeIds([]);
         }
       }
+
+      // Toggle keyboard shortcuts panel: ?
+      if (e.key === '?') {
+        e.preventDefault();
+        setShowShortcuts(prev => !prev);
+      }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [selectedStickyIds, selectedShapeIds, deleteStickyNoteData, deleteShapeData, setSelectedStickyIds, setSelectedShapeIds, editingSticky, editingTextShape]);
+  }, [selectedStickyIds, selectedShapeIds, deleteStickyNoteData, deleteShapeData, setSelectedStickyIds, setSelectedShapeIds, editingSticky, editingTextShape, editingShape, boardProvider, stickyNotes, shapes]);
 
   // Update transformer when selection changes
   useEffect(() => {
@@ -1017,8 +938,15 @@ export const Canvas: React.FC<CanvasProps> = ({ width, height }) => {
   // Handle shape drag
   const handleShapeDrag = (id: string, e: Konva.KonvaEventObject<DragEvent>) => {
     const node = e.target;
-    const newX = node.x();
-    const newY = node.y();
+    let newX = node.x();
+    let newY = node.y();
+
+    if (snapToGrid) {
+      newX = snapToGridValue(newX, gridSize);
+      newY = snapToGridValue(newY, gridSize);
+      node.x(newX);
+      node.y(newY);
+    }
 
     updateShapeData(id, { x: newX, y: newY });
   };
@@ -1033,10 +961,19 @@ export const Canvas: React.FC<CanvasProps> = ({ width, height }) => {
     node.scaleX(1);
     node.scaleY(1);
 
-    const newWidth = Math.max(20, node.width() * scaleX);
-    const newHeight = Math.max(20, node.height() * scaleY);
+    let newWidth = Math.max(20, node.width() * scaleX);
+    let newHeight = Math.max(20, node.height() * scaleY);
+
+    if (snapToGrid) {
+      newWidth = Math.max(gridSize, snapToGridValue(newWidth, gridSize));
+      newHeight = Math.max(gridSize, snapToGridValue(newHeight, gridSize));
+      node.x(snapToGridValue(node.x(), gridSize));
+      node.y(snapToGridValue(node.y(), gridSize));
+    }
 
     updateShapeData(id, {
+      x: node.x(),
+      y: node.y(),
       width: newWidth,
       height: newHeight,
     });
@@ -1055,7 +992,13 @@ export const Canvas: React.FC<CanvasProps> = ({ width, height }) => {
 
     // Use the smaller scale to maintain square aspect ratio
     const scale = Math.min(scaleX, scaleY);
-    const size = Math.max(50, node.width() * scale);
+    let size = Math.max(50, node.width() * scale);
+
+    if (snapToGrid) {
+      size = Math.max(gridSize, snapToGridValue(size, gridSize));
+      node.x(snapToGridValue(node.x(), gridSize));
+      node.y(snapToGridValue(node.y(), gridSize));
+    }
 
     node.width(size);
     node.height(size);
@@ -1093,6 +1036,7 @@ export const Canvas: React.FC<CanvasProps> = ({ width, height }) => {
         draggable={true}
         onWheel={handleWheel}
         onClick={handleStageClick}
+        onMouseMove={handleMouseMove}
         onDragStart={handleStageDragStart}
         onDragEnd={handleStageDragEnd}
       >
@@ -1126,6 +1070,14 @@ export const Canvas: React.FC<CanvasProps> = ({ width, height }) => {
             }}
           />
         </Layer>
+        {boardProvider && (
+          <Layer listening={false}>
+            <PresenceCursors
+              boardProvider={boardProvider}
+              localUserId={boardProvider.getUserId()}
+            />
+          </Layer>
+        )}
       </Stage>
 
       {/* HTML Input Overlay for editing sticky notes */}
@@ -1204,7 +1156,44 @@ export const Canvas: React.FC<CanvasProps> = ({ width, height }) => {
         <button onClick={resetView} className="btn btn-secondary">
           Reset View
         </button>
+        <button
+          onClick={() => setSnapToGrid(!snapToGrid)}
+          className="btn btn-secondary"
+          style={{
+            backgroundColor: snapToGrid ? '#007bff' : undefined,
+            color: snapToGrid ? 'white' : undefined,
+          }}
+        >
+          Snap
+        </button>
       </div>
+
+      {/* Keyboard shortcuts toggle button */}
+      <button
+        onClick={() => setShowShortcuts(prev => !prev)}
+        style={{
+          position: 'absolute',
+          bottom: '16px',
+          right: '16px',
+          width: '36px',
+          height: '36px',
+          borderRadius: '50%',
+          border: '1px solid #ccc',
+          backgroundColor: '#fff',
+          cursor: 'pointer',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontSize: '18px',
+          fontWeight: 600,
+          color: '#555',
+          boxShadow: '0 2px 8px rgba(0, 0, 0, 0.12)',
+          zIndex: 100,
+        }}
+        title="Keyboard shortcuts (?)"
+      >
+        ?
+      </button>
 
       {/* Context Menu */}
       {contextMenu.visible && (contextMenu.stickyId || contextMenu.shapeId) && (
@@ -1317,289 +1306,12 @@ export const Canvas: React.FC<CanvasProps> = ({ width, height }) => {
         />
       )}
 
+      {/* Keyboard Shortcuts Panel */}
+      <KeyboardShortcutsPanel
+        isOpen={showShortcuts}
+        onClose={() => setShowShortcuts(false)}
+      />
     </div>
   );
 };
 
-interface StickyNoteComponentProps {
-  note: StickyNote;
-  isSelected: boolean;
-  isEditing: boolean;
-  onClick: (e: Konva.KonvaEventObject<MouseEvent>) => void;
-  onDoubleClick: (e: Konva.KonvaEventObject<MouseEvent>) => void;
-  onDragEnd: (e: Konva.KonvaEventObject<DragEvent>) => void;
-  onContextMenu: (e: Konva.KonvaEventObject<MouseEvent>) => void;
-  onTransformEnd: (e: Konva.KonvaEventObject<Event>) => void;
-}
-
-const StickyNoteComponent: React.FC<StickyNoteComponentProps> = ({
-  note,
-  isSelected,
-  isEditing,
-  onClick,
-  onDoubleClick,
-  onDragEnd,
-  onContextMenu,
-  onTransformEnd,
-}) => {
-  const [editText, setEditText] = useState(note.text);
-  const textRef = useRef<Konva.Text>(null);
-  const { zoom, panX, panY } = useCanvasStore();
-
-  // Update edit text when note text changes
-  useEffect(() => {
-    setEditText(note.text);
-  }, [note.text]);
-
-
-
-
-
-
-  return (
-    <>
-      <Group
-        id={note.id}
-        x={note.x}
-        y={note.y}
-        width={note.width}
-        height={note.height}
-        draggable
-        onClick={onClick}
-        onDblClick={onDoubleClick}
-        onDragEnd={onDragEnd}
-        onContextMenu={onContextMenu}
-        onTransformEnd={onTransformEnd}
-      >
-        {/* Background */}
-        <Rect
-          width={note.width}
-          height={note.height}
-          fill={note.color}
-          stroke={isSelected ? '#007bff' : 'transparent'}
-          strokeWidth={isSelected ? 2 : 0}
-          shadowColor="black"
-          shadowBlur={5}
-          shadowOffset={{ x: 2, y: 2 }}
-          shadowOpacity={0.2}
-          cornerRadius={8}
-        />
-
-        {/* Text */}
-        <Text
-          ref={textRef}
-          x={10}
-          y={10}
-          width={note.width - 20}
-          height={note.height - 20}
-          text={isEditing ? '' : editText}
-          fontSize={note.fontSize || 14}
-          fontFamily="Arial, sans-serif"
-          fill={note.textColor || '#333'}
-          wrap="word"
-          align="center"
-          verticalAlign="middle"
-          listening={!isEditing}
-        />
-      </Group>
-    </>
-  );
-};
-
-// Shape Components
-interface RectangleComponentProps {
-  shape: Rectangle;
-  isSelected: boolean;
-  isEditing: boolean;
-  onClick: (e: Konva.KonvaEventObject<MouseEvent>) => void;
-  onDoubleClick: (e: Konva.KonvaEventObject<MouseEvent>) => void;
-  onDragEnd: (e: Konva.KonvaEventObject<DragEvent>) => void;
-  onContextMenu: (e: Konva.KonvaEventObject<MouseEvent>) => void;
-  onTransformEnd: (e: Konva.KonvaEventObject<Event>) => void;
-}
-
-const RectangleComponent: React.FC<RectangleComponentProps> = ({
-  shape,
-  isSelected,
-  isEditing,
-  onClick,
-  onDoubleClick,
-  onDragEnd,
-  onContextMenu,
-  onTransformEnd,
-}) => {
-  return (
-    <Group
-      id={shape.id}
-      x={shape.x}
-      y={shape.y}
-      width={shape.width}
-      height={shape.height}
-      draggable
-      onClick={onClick}
-      onDblClick={onDoubleClick}
-      onDragEnd={onDragEnd}
-      onContextMenu={onContextMenu}
-      onTransformEnd={onTransformEnd}
-    >
-      <Rect
-        width={shape.width}
-        height={shape.height}
-        fill={shape.fill}
-        stroke={isSelected ? '#007bff' : shape.stroke}
-        strokeWidth={isSelected ? 3 : shape.strokeWidth}
-        shadowColor="black"
-        shadowBlur={5}
-        shadowOffset={{ x: 2, y: 2 }}
-        shadowOpacity={0.2}
-      />
-
-      {/* Text */}
-      {!isEditing && shape.text && (
-        <Text
-          x={8}
-          y={8}
-          width={shape.width - 16}
-          height={shape.height - 16}
-          text={shape.text}
-          fontSize={shape.fontSize || 14}
-          fontFamily="Arial, sans-serif"
-          fill={shape.textColor || '#333'}
-          wrap="word"
-          align="left"
-          verticalAlign="top"
-          listening={false}
-        />
-      )}
-    </Group>
-  );
-};
-
-interface CircleComponentProps {
-  shape: Circle;
-  isSelected: boolean;
-  isEditing: boolean;
-  onClick: (e: Konva.KonvaEventObject<MouseEvent>) => void;
-  onDoubleClick: (e: Konva.KonvaEventObject<MouseEvent>) => void;
-  onDragEnd: (e: Konva.KonvaEventObject<DragEvent>) => void;
-  onContextMenu: (e: Konva.KonvaEventObject<MouseEvent>) => void;
-  onTransformEnd: (e: Konva.KonvaEventObject<Event>) => void;
-}
-
-const CircleComponent: React.FC<CircleComponentProps> = ({
-  shape,
-  isSelected,
-  isEditing,
-  onClick,
-  onDoubleClick,
-  onDragEnd,
-  onContextMenu,
-  onTransformEnd,
-}) => {
-  return (
-    <Group
-      id={shape.id}
-      x={shape.x}
-      y={shape.y}
-      width={shape.width}
-      height={shape.height}
-      draggable
-      onClick={onClick}
-      onDblClick={onDoubleClick}
-      onDragEnd={onDragEnd}
-      onContextMenu={onContextMenu}
-      onTransformEnd={onTransformEnd}
-    >
-      <Ellipse
-        radiusX={shape.width / 2}
-        radiusY={shape.height / 2}
-        x={shape.width / 2}
-        y={shape.height / 2}
-        fill={shape.fill}
-        stroke={isSelected ? '#007bff' : shape.stroke}
-        strokeWidth={isSelected ? 3 : shape.strokeWidth}
-        shadowColor="black"
-        shadowBlur={5}
-        shadowOffset={{ x: 2, y: 2 }}
-        shadowOpacity={0.2}
-      />
-
-      {/* Text */}
-      {!isEditing && shape.text && (
-        <Text
-          x={8}
-          y={8}
-          width={shape.width - 16}
-          height={shape.height - 16}
-          text={shape.text}
-          fontSize={shape.fontSize || 14}
-          fontFamily="Arial, sans-serif"
-          fill={shape.textColor || '#333'}
-          wrap="word"
-          align="center"
-          verticalAlign="middle"
-          listening={false}
-        />
-      )}
-    </Group>
-  );
-};
-
-interface TextShapeComponentProps {
-  shape: TextShape;
-  isSelected: boolean;
-  isEditing: boolean;
-  onClick: (e: Konva.KonvaEventObject<MouseEvent>) => void;
-  onDoubleClick: (e: Konva.KonvaEventObject<MouseEvent>) => void;
-  onDragEnd: (e: Konva.KonvaEventObject<DragEvent>) => void;
-  onContextMenu: (e: Konva.KonvaEventObject<MouseEvent>) => void;
-  onTransformEnd: (e: Konva.KonvaEventObject<Event>) => void;
-}
-
-const TextShapeComponent: React.FC<TextShapeComponentProps> = ({
-  shape,
-  isSelected,
-  isEditing,
-  onClick,
-  onDoubleClick,
-  onDragEnd,
-  onContextMenu,
-  onTransformEnd,
-}) => {
-  const { zoom, panX, panY } = useCanvasStore();
-
-  return (
-    <>
-      <Group
-        id={shape.id}
-        x={shape.x}
-        y={shape.y}
-        width={shape.width}
-        height={shape.height}
-        draggable
-        onClick={onClick}
-        onDblClick={onDoubleClick}
-        onDragEnd={onDragEnd}
-        onContextMenu={onContextMenu}
-        onTransformEnd={onTransformEnd}
-      >
-        <Text
-          x={0}
-          y={0}
-          width={shape.width}
-          height={shape.height}
-          text={isEditing ? '' : shape.text}
-          fontSize={shape.fontSize}
-          fontFamily={shape.fontFamily}
-          fill={shape.fill}
-          wrap="word"
-          align="left"
-          verticalAlign="top"
-          listening={!isEditing}
-          stroke={isSelected ? '#007bff' : 'transparent'}
-          strokeWidth={isSelected ? 1 : 0}
-        />
-      </Group>
-    </>
-  );
-};

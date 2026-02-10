@@ -5,12 +5,16 @@ import { useBoardStore } from '../stores/boardStore';
 import { BoardProvider } from '../yjs/BoardProvider';
 import { Canvas } from '../components/canvas/Canvas';
 import { boardService } from '../services/board';
+import { MemberPanel } from '../components/MemberPanel';
 
 export const BoardPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
   const navigate = useNavigate();
   const [canvasSize, setCanvasSize] = useState({ width: 0, height: 0 });
+  const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const [editTitleValue, setEditTitleValue] = useState('');
+  const [showMemberPanel, setShowMemberPanel] = useState(false);
 
   const {
     boardTitle,
@@ -42,7 +46,7 @@ export const BoardPage: React.FC = () => {
         setBoardTitle(board.title);
 
         // Create board provider
-        const provider = new BoardProvider(id, user.id);
+        const provider = new BoardProvider(id, user.id, user.displayName);
         await provider.initialize();
 
         setBoardProvider(provider);
@@ -60,24 +64,20 @@ export const BoardPage: React.FC = () => {
 
         // Listen for changes
         provider.getDocument().on('update', (_update: Uint8Array, _origin: any) => {
-          // Update UI for all updates to ensure real-time sync
-          console.log('Received update, updating UI');
           setStickyNotes(provider.getStickyNotes());
           setShapes(provider.getShapes());
         });
 
-        // Also listen for changes to the board document structure
+        // Listen for changes to the board document structure
         const boardDoc = provider.getBoardDocument();
         const stickiesMap = boardDoc.getBoardDoc().stickies;
         const shapesMap = boardDoc.getBoardDoc().shapes;
 
         stickiesMap.observe(() => {
-          console.log('Stickies map changed, updating UI');
           setStickyNotes(provider.getStickyNotes());
         });
 
         shapesMap.observe(() => {
-          console.log('Shapes map changed, updating UI');
           setShapes(provider.getShapes());
         });
 
@@ -178,14 +178,70 @@ export const BoardPage: React.FC = () => {
             Home
           </button>
           <div>
-            <h2 style={{ margin: 0 }}>{boardTitle || 'Untitled Board'}</h2>
+            {isEditingTitle ? (
+              <input
+                type="text"
+                value={editTitleValue}
+                onChange={(e) => setEditTitleValue(e.target.value)}
+                onBlur={async () => {
+                  const trimmed = editTitleValue.trim();
+                  if (trimmed && trimmed !== boardTitle && id) {
+                    try {
+                      await boardService.updateBoard(id, { title: trimmed });
+                      setBoardTitle(trimmed);
+                    } catch { /* keep existing title */ }
+                  }
+                  setIsEditingTitle(false);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
+                  if (e.key === 'Escape') { setIsEditingTitle(false); }
+                }}
+                autoFocus
+                style={{
+                  margin: 0,
+                  fontSize: '1.5em',
+                  fontWeight: 'bold',
+                  border: '1px solid #007bff',
+                  borderRadius: '4px',
+                  padding: '2px 8px',
+                  outline: 'none',
+                  width: '300px',
+                }}
+              />
+            ) : (
+              <h2
+                style={{ margin: 0, cursor: 'pointer' }}
+                onClick={() => {
+                  setEditTitleValue(boardTitle || '');
+                  setIsEditingTitle(true);
+                }}
+                title="Click to edit title"
+              >
+                {boardTitle || 'Untitled Board'}
+              </h2>
+            )}
             <div style={{ fontSize: '12px', color: '#666' }}>
               {isConnected ? '🟢 Connected' : '🔴 Disconnected'} •
               {stickyNotes.size} sticky notes • {shapes.size} shapes
             </div>
           </div>
         </div>
-        <div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <button
+            onClick={() => setShowMemberPanel(true)}
+            style={{
+              padding: '8px 16px',
+              fontSize: '14px',
+              cursor: 'pointer',
+              backgroundColor: '#007bff',
+              color: 'white',
+              border: 'none',
+              borderRadius: '4px',
+            }}
+          >
+            Members
+          </button>
           <span>Welcome, {user.displayName}</span>
         </div>
       </div>
@@ -200,6 +256,15 @@ export const BoardPage: React.FC = () => {
           <Canvas width={canvasSize.width} height={canvasSize.height} />
         )}
       </div>
+
+      {id && (
+        <MemberPanel
+          boardId={id}
+          isOpen={showMemberPanel}
+          onClose={() => setShowMemberPanel(false)}
+          currentUserId={user.id}
+        />
+      )}
     </div>
   );
 };

@@ -6,6 +6,7 @@ import { CustomError } from '../middleware/errorHandler.js';
 import { CreateUser, Login, User } from '../../../../packages/shared/dist/index.js';
 import { emailService } from './email.js';
 import { queryOne } from '../utils/database.js';
+import { logger } from '../utils/logger.js';
 
 export const authService = {
   async signup(userData: CreateUser): Promise<User> {
@@ -41,7 +42,7 @@ export const authService = {
       await emailService.sendWelcomeEmail(user.email, user.displayName);
     } catch (error) {
       // Log error but don't fail signup
-      console.error('Failed to send welcome email:', error);
+      logger.error({ error }, 'Failed to send welcome email');
     }
 
     return user;

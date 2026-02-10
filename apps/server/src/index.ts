@@ -10,6 +10,9 @@ import { errorHandler } from './middleware/errorHandler.js';
 import { logger } from './utils/logger.js';
 import { config } from './utils/config.js';
 import { initializeDatabase, closeDatabase } from './utils/database.js';
+import { verifyWebSocketClient } from './middleware/wsAuth.js';
+import { csrfProtection } from './middleware/csrf.js';
+import { authRateLimiter, apiRateLimiter } from './middleware/rateLimit.js';
 
 const app = express();
 const server = createServer(app);
@@ -29,6 +32,13 @@ app.use(cors({
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
+
+// Rate limiting
+app.use('/api/auth', authRateLimiter);
+app.use('/api', apiRateLimiter);
+
+// CSRF protection (Double Submit Cookie)
+app.use('/api', csrfProtection);
 
 // Request logging
 app.use((req, _res, next) => {
@@ -68,9 +78,8 @@ app.use('*', (_req, res) => {
 // Setup WebSocket server
 const wss = new WebSocketServer({
   server,
-  verifyClient: (info: any) => {
-    logger.info({ url: info.req.url, origin: info.origin }, 'WebSocket connection attempt');
-    return true; // Accept all connections for now
+  verifyClient: (info: any, callback: (result: boolean, code?: number, message?: string) => void) => {
+    verifyWebSocketClient(info, callback);
   },
 });
 

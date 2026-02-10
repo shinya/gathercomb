@@ -23,6 +23,7 @@ interface CanvasState {
   // Grid state
   showGrid: boolean;
   gridSize: number;
+  snapToGrid: boolean;
 
   // Actions
   setZoom: (zoom: number) => void;
@@ -35,6 +36,7 @@ interface CanvasState {
   setCurrentTool: (tool: 'select' | 'create' | 'pan') => void;
   setShowGrid: (show: boolean) => void;
   setGridSize: (size: number) => void;
+  setSnapToGrid: (snap: boolean) => void;
 
   // Canvas transformations
   zoomIn: () => void;
@@ -56,6 +58,7 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
   currentTool: 'select',
   showGrid: true,
   gridSize: 20,
+  snapToGrid: false,
 
   // Actions
   setZoom: (zoom) => set({ zoom }),
@@ -68,6 +71,7 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
   setCurrentTool: (currentTool) => set({ currentTool }),
   setShowGrid: (showGrid) => set({ showGrid }),
   setGridSize: (gridSize) => set({ gridSize }),
+  setSnapToGrid: (snapToGrid) => set({ snapToGrid }),
 
   // Canvas transformations
   zoomIn: () => {
@@ -264,13 +268,9 @@ export const useBoardStore = create<BoardState>((set, get) => ({
   },
 
   updateStickyNoteData: (id, updates) => {
-    console.log('🔍 boardStore: updateStickyNoteData called', { id, updates });
     const { boardProvider } = get();
     if (boardProvider) {
-      console.log('🔍 boardStore: boardProvider exists, calling updateStickyNote');
       boardProvider.updateStickyNote(id, updates);
-    } else {
-      console.error('🔍 boardStore: boardProvider is null!');
     }
   },
 

@@ -1,5 +1,7 @@
 import { User, Login, CreateUser, ApiResponse } from '@gathercomb/shared';
 
+import { getCsrfToken } from '../utils/csrf';
+
 const API_BASE_URL = import.meta.env?.VITE_API_URL ||
   (typeof window !== 'undefined' ? 'http://localhost:8080/api' : 'http://backend:8080/api');
 
@@ -16,12 +18,20 @@ async function apiRequest<T>(
 ): Promise<T> {
   const url = `${API_BASE_URL}${endpoint}`;
 
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    ...(options.headers as Record<string, string>),
+  };
+
+  // Add CSRF token for state-changing requests
+  const csrfToken = getCsrfToken();
+  if (csrfToken) {
+    headers['X-CSRF-Token'] = csrfToken;
+  }
+
   const response = await fetch(url, {
     credentials: 'include',
-    headers: {
-      'Content-Type': 'application/json',
-      ...options.headers,
-    },
+    headers,
     ...options,
   });
 

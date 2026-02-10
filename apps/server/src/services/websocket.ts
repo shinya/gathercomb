@@ -23,7 +23,14 @@ export const setupWebSocketServer = (wss: WebSocketServer): void => {
       // Extract board ID from room (format: board:boardId)
       const boardId = room.startsWith('board:') ? room.substring(6) : room;
 
-      logger.info({ room, boardId, clientIP: req.socket.remoteAddress }, 'Yjs WebSocket connection established');
+      // Get authenticated user info (set by wsAuth middleware)
+      const userId = (req as any).userId;
+      const userRole = (req as any).userRole;
+
+      logger.info(
+        { room, boardId, userId, userRole, clientIP: req.socket.remoteAddress },
+        'Yjs WebSocket connection established'
+      );
 
       // Initialize or get board persistence
       if (!roomPersistence.has(room)) {
